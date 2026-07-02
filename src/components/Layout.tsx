@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -63,6 +63,19 @@ export function Layout() {
             {label}
           </NavLink>
         ))}
+        {player?.is_admin && (
+          <NavLink
+            to="/admin"
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-xl px-3 py-2.5 font-medium transition ${
+                isActive ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`
+            }
+          >
+            <ShieldCheck size={18} />
+            Admin
+          </NavLink>
+        )}
         <div className="mt-auto flex flex-col gap-2">
           {player && (
             <NavLink to={`/players/${player.id}`} className="flex items-center gap-2 rounded-xl px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-800">

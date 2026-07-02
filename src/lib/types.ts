@@ -6,6 +6,7 @@ export interface Player {
   name: string
   avatar_url: string | null
   rating: number
+  is_admin: boolean
   created_at: string
 }
 

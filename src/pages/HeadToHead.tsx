@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Zap } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { suggestedHandicap } from '@/lib/handicap'
 import type { Match, Player } from '@/lib/types'
 
 export function HeadToHead() {
@@ -80,6 +82,25 @@ export function HeadToHead() {
               <p className="text-xs text-slate-500">{bSets} sett</p>
             </div>
           </div>
+
+          {matches.length > 0 && (
+            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
+              {aWins === bWins
+                ? 'Helt jevnt løp mellom dem 🤝'
+                : `${aWins > bWins ? a.name : b.name} dominerer oppgjøret ${Math.max(aWins, bWins)}–${Math.min(aWins, bWins)} 🔥`}
+            </p>
+          )}
+
+          {a.rating !== b.rating && (
+            <div className="card p-4 flex items-center gap-3">
+              <Zap size={20} className="text-amber-500 shrink-0" />
+              <p className="text-sm">
+                Håndikapp-forslag for en jevnere uformell kamp: <strong>{a.rating > b.rating ? b.name : a.name}</strong> starter med{' '}
+                <strong>{suggestedHandicap(a.rating, b.rating)} poeng</strong> forsprang i et vanlig 11-poengs sett
+                <span className="text-slate-400"> (basert på ratingforskjell på {Math.round(Math.abs(a.rating - b.rating))})</span>.
+              </p>
+            </div>
+          )}
 
           {matches.length === 0 ? (
             <p className="text-slate-500 dark:text-slate-400">Ingen kamper spilt mot hverandre ennå.</p>

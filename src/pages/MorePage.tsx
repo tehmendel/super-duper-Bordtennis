@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Swords, QrCode, UserPlus, ChevronRight, UserCog } from 'lucide-react'
+import { Swords, QrCode, UserPlus, ChevronRight, UserCog, ShieldCheck } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 const ITEMS = [
   { to: '/profile/edit', label: 'Min profil', description: 'Endre navn og profilbilde', icon: UserCog },
@@ -9,11 +10,16 @@ const ITEMS = [
 ]
 
 export function MorePage() {
+  const { player } = useAuth()
+  const items = player?.is_admin
+    ? [...ITEMS, { to: '/admin', label: 'Admin', description: 'Rediger kamper og se aktivitetsstatistikk', icon: ShieldCheck }]
+    : ITEMS
+
   return (
     <div className="flex flex-col gap-4">
       <h1 className="text-2xl font-bold">Mer</h1>
       <div className="card divide-y divide-slate-200 dark:divide-slate-800">
-        {ITEMS.map(({ to, label, description, icon: Icon }) => (
+        {items.map(({ to, label, description, icon: Icon }) => (
           <Link key={to} to={to} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
             <Icon size={20} className="text-brand-600 dark:text-brand-400" />
             <div className="flex-1">
