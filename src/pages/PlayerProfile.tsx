@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { Pencil } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
 import { AchievementBadge } from '@/components/AchievementBadge'
+import { MatchDetailModal } from '@/components/MatchDetailModal'
 import type { AchievementDefinition, LeaderboardRow, Match, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
 
 export function PlayerProfile() {
   const { id } = useParams<{ id: string }>()
+  const { player: currentPlayer } = useAuth()
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [player, setPlayer] = useState<Player | null>(null)
   const [rank, setRank] = useState<number | null>(null)
   const [total, setTotal] = useState(0)
@@ -80,10 +85,15 @@ export function PlayerProfile() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
         <PlayerAvatar name={player.name} avatarUrl={player.avatar_url} size="lg" />
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold">{player.name}</h1>
           <p className="text-slate-500 dark:text-slate-400">{rank ? `Plass #${rank} av ${total}` : 'Ingen rangering ennå'}</p>
         </div>
+        {currentPlayer?.id === player.id && (
+          <Link to="/profile/edit" className="btn-secondary py-2 px-3 text-sm">
+            <Pencil size={16} /> Rediger
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -133,15 +143,21 @@ export function PlayerProfile() {
           {matches.slice(0, 15).map((m) => {
             const won = m.winner_id === id
             return (
-              <div key={m.id} className="card p-3 flex items-center justify-between text-sm">
+              <button
+                key={m.id}
+                onClick={() => setSelectedMatchId(m.id)}
+                className="card p-3 flex items-center justify-between text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
+              >
                 <span className={won ? 'text-emerald-500 font-semibold' : 'text-rose-500 font-semibold'}>{won ? 'Seier' : 'Tap'}</span>
                 <span className="font-mono">{m.sets_won_player1}–{m.sets_won_player2}</span>
                 <span className="text-slate-400 text-xs">{new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO')}</span>
-              </div>
+              </button>
             )
           })}
         </div>
       </div>
+
+      <MatchDetailModal matchId={selectedMatchId} onClose={() => setSelectedMatchId(null)} />
     </div>
   )
 }

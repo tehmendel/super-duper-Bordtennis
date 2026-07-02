@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
-import { Swords, QrCode, UserPlus, ChevronRight } from 'lucide-react'
+import { Swords, QrCode, UserPlus, ChevronRight, UserCog } from 'lucide-react'
 
 const ITEMS = [
+  { to: '/profile/edit', label: 'Min profil', description: 'Endre navn og profilbilde', icon: UserCog },
   { to: '/head-to-head', label: 'Head-to-head', description: 'Sammenlign to spillere', icon: Swords },
   { to: '/qr', label: 'QR-kode', description: 'Heng opp ved bordet', icon: QrCode },
   { to: '/invite', label: 'Inviter spiller', description: 'Send påloggingslenke til en kollega', icon: UserPlus },

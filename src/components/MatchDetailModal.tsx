@@ -1,0 +1,129 @@
+import { useEffect, useState } from 'react'
+import { X } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { PlayerAvatar } from '@/components/PlayerAvatar'
+import type { Match, MatchSet, Player, RatingHistoryEntry } from '@/lib/types'
+
+interface Details {
+  match: Match
+  player1: Player
+  player2: Player
+  sets: MatchSet[]
+  deltas: RatingHistoryEntry[]
+}
+
+export function MatchDetailModal({ matchId, onClose }: { matchId: string | null; onClose: () => void }) {
+  const [details, setDetails] = useState<Details | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!matchId) {
+      setDetails(null)
+      return
+    }
+    let cancelled = false
+    setLoading(true)
+    async function load() {
+      const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single()
+      if (!match || cancelled) return
+
+      const [{ data: player1 }, { data: player2 }, { data: sets }, { data: deltas }] = await Promise.all([
+        supabase.from('players').select('*').eq('id', match.player1_id).single(),
+        supabase.from('players').select('*').eq('id', match.player2_id).single(),
+        supabase.from('match_sets').select('*').eq('match_id', matchId).order('set_number').returns<MatchSet[]>(),
+        supabase.from('ratings_history').select('*').eq('match_id', matchId).returns<RatingHistoryEntry[]>(),
+      ])
+
+      if (!cancelled && player1 && player2) {
+        setDetails({ match, player1, player2, sets: sets ?? [], deltas: deltas ?? [] })
+      }
+      if (!cancelled) setLoading(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [matchId])
+
+  if (!matchId) return null
+
+  const d1 = details?.deltas.find((d) => d.player_id === details.match.player1_id)
+  const d2 = details?.deltas.find((d) => d.player_id === details.match.player2_id)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div
+        className="card w-full max-w-sm p-6 animate-pop-in max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Kampdetaljer</h2>
+          <button onClick={onClose} className="btn-ghost p-1.5">
+            <X size={18} />
+          </button>
+        </div>
+
+        {loading || !details ? (
+          <p className="text-slate-500">Laster...</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-around text-center">
+              <div className="flex flex-col items-center gap-1">
+                <PlayerAvatar name={details.player1.name} avatarUrl={details.player1.avatar_url} />
+                <span className={`text-sm font-medium ${details.match.winner_id === details.player1.id ? 'font-bold' : ''}`}>
+                  {details.player1.name}
+                </span>
+                {d1 && (
+                  <span className={`text-xs ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {d1.delta >= 0 ? '+' : ''}{Math.round(d1.delta)}
+                  </span>
+                )}
+              </div>
+              <span className="text-2xl font-bold text-slate-400">
+                {details.match.sets_won_player1}–{details.match.sets_won_player2}
+              </span>
+              <div className="flex flex-col items-center gap-1">
+                <PlayerAvatar name={details.player2.name} avatarUrl={details.player2.avatar_url} />
+                <span className={`text-sm font-medium ${details.match.winner_id === details.player2.id ? 'font-bold' : ''}`}>
+                  {details.player2.name}
+                </span>
+                {d2 && (
+                  <span className={`text-xs ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {d2.delta >= 0 ? '+' : ''}{Math.round(d2.delta)}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-slate-400 text-xs">
+                  <th className="text-left font-medium py-1">Sett</th>
+                  <th className="text-right font-medium py-1">{details.player1.name}</th>
+                  <th className="text-right font-medium py-1">{details.player2.name}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {details.sets.map((s) => {
+                  const p1Won = s.player1_score > s.player2_score
+                  return (
+                    <tr key={s.set_number} className="border-t border-slate-100 dark:border-slate-800">
+                      <td className="py-1.5 text-slate-500">{s.set_number}</td>
+                      <td className={`py-1.5 text-right font-mono ${p1Won ? 'font-bold' : ''}`}>{s.player1_score}</td>
+                      <td className={`py-1.5 text-right font-mono ${!p1Won ? 'font-bold' : ''}`}>{s.player2_score}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+
+            <div className="text-xs text-slate-400 flex flex-col gap-0.5">
+              <span>{new Date(details.match.confirmed_at ?? details.match.created_at).toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
+              {details.match.location && <span>📍 {details.match.location}</span>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}

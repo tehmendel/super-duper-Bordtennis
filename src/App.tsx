@@ -14,6 +14,7 @@ import { HeadToHead } from '@/pages/HeadToHead'
 import { QrCodePage } from '@/pages/QrCodePage'
 import { InvitePlayer } from '@/pages/InvitePlayer'
 import { MorePage } from '@/pages/MorePage'
+import { EditProfile } from '@/pages/EditProfile'
 
 function FullScreenSpinner() {
   return (
@@ -44,6 +45,7 @@ export default function App() {
         <Route path="/qr" element={<QrCodePage />} />
         <Route path="/invite" element={<InvitePlayer />} />
         <Route path="/more" element={<MorePage />} />
+        <Route path="/profile/edit" element={<EditProfile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
