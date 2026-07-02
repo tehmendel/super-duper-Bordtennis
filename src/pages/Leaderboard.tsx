@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowUp, ArrowDown, Minus } from 'lucide-react'
 import { startOfMonth, startOfQuarter } from 'date-fns'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
-import type { LeaderboardRow } from '@/lib/types'
+import { previousRatingSnapshot } from '@/lib/stats'
+import type { LeaderboardRow, RatingHistoryEntry } from '@/lib/types'
 
 type Period = 'all' | 'month' | 'quarter'
 
@@ -13,6 +15,7 @@ interface Row extends LeaderboardRow {
   periodDelta: number
   periodWins: number
   periodLosses: number
+  rankChange: number | null
 }
 
 export function Leaderboard() {
@@ -37,7 +40,23 @@ export function Leaderboard() {
         .returns<LeaderboardRow[]>()
       if (!board) return setLoading(false)
 
-      let enriched: Row[] = board.map((b) => ({ ...b, periodDelta: 0, periodWins: 0, periodLosses: 0 }))
+      let enriched: Row[] = board.map((b) => ({ ...b, periodDelta: 0, periodWins: 0, periodLosses: 0, rankChange: null }))
+
+      if (period === 'all') {
+        const { data: fullHistory } = await supabase.from('ratings_history').select('*').returns<RatingHistoryEntry[]>()
+        if (fullHistory) {
+          const previousOrder = [...board]
+            .map((b) => ({ id: b.id, prevRating: previousRatingSnapshot(fullHistory, b.id) }))
+            .sort((a, b) => b.prevRating - a.prevRating)
+          const previousRank = new Map(previousOrder.map((p, i) => [p.id, i + 1]))
+          const currentSorted = [...board].sort((a, b) => b.rating - a.rating)
+          enriched = enriched.map((r) => {
+            const currentRank = currentSorted.findIndex((c) => c.id === r.id) + 1
+            const prevRank = previousRank.get(r.id)
+            return { ...r, rankChange: prevRank ? prevRank - currentRank : null }
+          })
+        }
+      }
 
       if (period !== 'all') {
         const start = (period === 'month' ? startOfMonth(new Date()) : startOfQuarter(new Date())).toISOString()
@@ -112,7 +131,16 @@ export function Leaderboard() {
                 <span className="w-8 text-center font-bold text-slate-500">{MEDALS[i] ?? i + 1}</span>
                 <PlayerAvatar name={r.name} avatarUrl={r.avatar_url} size="sm" />
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{r.name}</p>
+                  <p className="font-medium truncate flex items-center gap-1.5">
+                    {r.name}
+                    {period === 'all' && r.rankChange !== null && r.rankChange !== 0 && (
+                      <span className={`inline-flex items-center text-xs font-semibold ${r.rankChange > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {r.rankChange > 0 ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
+                        {Math.abs(r.rankChange)}
+                      </span>
+                    )}
+                    {period === 'all' && r.rankChange === 0 && <Minus size={12} className="text-slate-300" />}
+                  </p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
                     {r.matches_played} kamper · {winRate}% seiere
                   </p>

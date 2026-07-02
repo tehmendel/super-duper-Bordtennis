@@ -66,6 +66,7 @@ export interface Season {
   name: string
   started_at: string
   ended_at: string | null
+  target_end_date: string | null
   is_active: boolean
 }
 

@@ -24,6 +24,7 @@ export function Seasons() {
   const [rows, setRows] = useState<StandingRow[]>([])
   const [loading, setLoading] = useState(true)
   const [newSeasonName, setNewSeasonName] = useState('')
+  const [targetEndDate, setTargetEndDate] = useState('')
   const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -82,13 +83,17 @@ export function Seasons() {
     if (!newSeasonName.trim()) return
     setStarting(true)
     setError(null)
-    const { error } = await supabase.rpc('start_new_season', { p_name: newSeasonName.trim() })
+    const { error } = await supabase.rpc('start_new_season', {
+      p_name: newSeasonName.trim(),
+      p_target_end_date: targetEndDate ? new Date(targetEndDate).toISOString() : null,
+    })
     setStarting(false)
     if (error) {
       setError(error.message)
       return
     }
     setNewSeasonName('')
+    setTargetEndDate('')
     await loadSeasons()
   }
 
@@ -105,6 +110,13 @@ export function Seasons() {
           </option>
         ))}
       </select>
+
+      {selectedSeason?.target_end_date && (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          {Math.max(0, Math.ceil((new Date(selectedSeason.target_end_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))} dager igjen
+          (slutter {new Date(selectedSeason.target_end_date).toLocaleDateString('no-NO')})
+        </p>
+      )}
 
       {loading ? (
         <p className="text-slate-500">Laster...</p>
@@ -145,6 +157,10 @@ export function Seasons() {
             <button onClick={handleStartNewSeason} disabled={starting} className="btn-primary shrink-0">
               {starting ? 'Starter...' : 'Start'}
             </button>
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Planlagt sluttdato (valgfritt, viser nedtelling på dashboard)</label>
+            <input type="date" value={targetEndDate} onChange={(e) => setTargetEndDate(e.target.value)} className="input" />
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>

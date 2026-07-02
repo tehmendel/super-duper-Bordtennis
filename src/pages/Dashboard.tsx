@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, CheckCircle2, TrendingUp, TrendingDown } from 'lucide-react'
+import { PlusCircle, CheckCircle2, TrendingUp, TrendingDown, Hourglass, Target, Clock3, History as HistoryIcon, Shuffle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
 import { HiddenAchievementFeed } from '@/components/HiddenAchievementFeed'
-import type { LeaderboardRow, Match, Player } from '@/lib/types'
+import type { LeaderboardRow, Match, Player, Season } from '@/lib/types'
 
 interface MatchOfWeek {
   match: Match
@@ -14,6 +14,8 @@ interface MatchOfWeek {
   player2: Player
   delta: number
 }
+
+const MILESTONES = [10, 25, 50, 100, 250, 500]
 
 export function Dashboard() {
   const { player } = useAuth()
@@ -23,6 +25,12 @@ export function Dashboard() {
   const [pendingCount, setPendingCount] = useState(0)
   const [matchOfWeek, setMatchOfWeek] = useState<MatchOfWeek | null>(null)
   const [loading, setLoading] = useState(true)
+  const [season, setSeason] = useState<Season | null>(null)
+  const [pointsBehindLeader, setPointsBehindLeader] = useState<{ name: string; points: number } | null>(null)
+  const [totalMatchesPlayed, setTotalMatchesPlayed] = useState(0)
+  const [daysSinceLastMatch, setDaysSinceLastMatch] = useState<number | null>(null)
+  const [ownMatches, setOwnMatches] = useState<(Match & { opponent: Player })[]>([])
+  const [pastMatchIndex, setPastMatchIndex] = useState(0)
 
   useEffect(() => {
     if (!player) return
@@ -40,8 +48,16 @@ export function Dashboard() {
         if (!cancelled) {
           setRank(idx >= 0 ? idx + 1 : null)
           setTotalPlayers(board.length)
+          if (idx > 0) {
+            setPointsBehindLeader({ name: board[0].name, points: Math.round(board[0].rating - board[idx].rating) })
+          } else {
+            setPointsBehindLeader(null)
+          }
         }
       }
+
+      const { data: seasonData } = await supabase.from('seasons').select('*').eq('is_active', true).maybeSingle()
+      if (!cancelled) setSeason(seasonData ?? null)
 
       const { data: recent } = await supabase
         .from('matches')
@@ -54,6 +70,31 @@ export function Dashboard() {
 
       if (recent && !cancelled) {
         setForm(recent.map((m) => (m.winner_id === player!.id ? 'W' : 'L')))
+        if (recent.length > 0) {
+          const lastDate = new Date(recent[0].confirmed_at ?? recent[0].created_at)
+          setDaysSinceLastMatch(Math.floor((Date.now() - lastDate.getTime()) / (24 * 60 * 60 * 1000)))
+        }
+      }
+
+      const { count: totalCount } = await supabase
+        .from('matches')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'confirmed')
+        .or(`player1_id.eq.${player!.id},player2_id.eq.${player!.id}`)
+      if (!cancelled) setTotalMatchesPlayed(totalCount ?? 0)
+
+      const { data: allOwn } = await supabase
+        .from('matches')
+        .select('*, p1:players!matches_player1_id_fkey(*), p2:players!matches_player2_id_fkey(*)')
+        .eq('status', 'confirmed')
+        .or(`player1_id.eq.${player!.id},player2_id.eq.${player!.id}`)
+      if (allOwn && !cancelled) {
+        const withOpponent = allOwn.map((m) => ({
+          ...m,
+          opponent: m.player1_id === player!.id ? m.p2 : m.p1,
+        }))
+        setOwnMatches(withOpponent)
+        setPastMatchIndex(withOpponent.length > 0 ? Math.floor(Math.random() * withOpponent.length) : 0)
       }
 
       const { count } = await supabase
@@ -131,6 +172,75 @@ export function Dashboard() {
           )}
         </Link>
       </div>
+
+      {season?.target_end_date && (
+        <div className="card p-5 flex items-center gap-3">
+          <Hourglass size={22} className="text-violet-500 shrink-0" />
+          <p className="text-sm">
+            <strong>{Math.max(0, Math.ceil((new Date(season.target_end_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))} dager</strong> igjen av {season.name}
+            {pointsBehindLeader && (
+              <> — du er <strong>{pointsBehindLeader.points} poeng</strong> bak {pointsBehindLeader.name} på 1. plass!</>
+            )}
+          </p>
+        </div>
+      )}
+
+      {(() => {
+        const nextMilestone = MILESTONES.find((m) => m - totalMatchesPlayed >= 1 && m - totalMatchesPlayed <= 2)
+        if (!nextMilestone) return null
+        const remaining = nextMilestone - totalMatchesPlayed
+        return (
+          <div className="card p-5 flex items-center gap-3">
+            <Target size={22} className="text-brand-600 shrink-0" />
+            <p className="text-sm">
+              Du er <strong>{remaining} kamp{remaining > 1 ? 'er' : ''}</strong> unna <strong>{nextMilestone} totalt</strong>! 🎯
+            </p>
+          </div>
+        )
+      })()}
+
+      {daysSinceLastMatch !== null && daysSinceLastMatch >= 14 && (
+        <div className="card p-5 flex items-center gap-3">
+          <Clock3 size={22} className="text-amber-500 shrink-0" />
+          <p className="text-sm">
+            Det er <strong>{daysSinceLastMatch} dager</strong> siden sist du spilte en kamp. På tide med en runde? 🏓
+          </p>
+        </div>
+      )}
+
+      {ownMatches.length > 0 && ownMatches[pastMatchIndex] && (
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <HistoryIcon size={16} /> Kamp fra fortiden
+            </p>
+            <button
+              onClick={() => setPastMatchIndex(Math.floor(Math.random() * ownMatches.length))}
+              className="btn-ghost p-1.5"
+              title="Vis en annen"
+            >
+              <Shuffle size={14} />
+            </button>
+          </div>
+          {(() => {
+            const m = ownMatches[pastMatchIndex]
+            const won = m.winner_id === player.id
+            const isP1 = m.player1_id === player.id
+            const myScore = isP1 ? m.sets_won_player1 : m.sets_won_player2
+            const oppScore = isP1 ? m.sets_won_player2 : m.sets_won_player1
+            return (
+              <p className="text-sm">
+                Den {new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO', { day: 'numeric', month: 'long', year: 'numeric' })}{' '}
+                {won ? 'slo du' : 'tapte du mot'}{' '}
+                <Link to={`/players/${m.opponent.id}`} className="font-semibold text-brand-600 hover:underline">
+                  {m.opponent.name}
+                </Link>{' '}
+                {myScore}–{oppScore}
+              </p>
+            )
+          })()}
+        </div>
+      )}
 
       <HiddenAchievementFeed />
 
