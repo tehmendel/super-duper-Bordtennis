@@ -12,6 +12,19 @@ interface FeedEntry extends PlayerAchievement {
 const REVEAL_TEXT: Record<string, (name: string) => string> = {
   night_owl: (name) => `${name} spilte en kamp midt på natten og låste opp en skjult prestasjon 🦉`,
   shutout: (name) => `${name} rullet et sett uten å slippe til motstanderen og låste opp en skjult prestasjon 🥶`,
+  weekend_warrior: (name) => `${name} spilte bordtennis i helgen og låste opp en skjult prestasjon 🏖️`,
+  early_bird: (name) => `${name} rakk en kamp før frokost og låste opp en skjult prestasjon 🐦`,
+  century_club: (name) => `${name} nådde 10 kamper og låste opp en skjult prestasjon 💯`,
+  marathon: (name) => `${name} spilte en full femsettskamp og låste opp en skjult prestasjon 🏃`,
+  revenge: (name) => `${name} tok revansje mot en gammel plage og låste opp en skjult prestasjon 🗡️`,
+  hat_trick_day: (name) => `${name} vant 3 kamper på én dag og låste opp en skjult prestasjon 🎩`,
+  deuce_master: (name) => `${name} vant en knallhard settavslutning og låste opp en skjult prestasjon ♟️`,
+  busy_week: (name) => `${name} spilte 5 kamper på en uke og låste opp en skjult prestasjon 📅`,
+  flawless: (name) => `${name} vant en kamp uten å slippe til ett eneste poeng og låste opp en skjult prestasjon 💎`,
+  unstoppable_20: (name) => `${name} har vunnet 20 kamper på rad og låste opp en skjult prestasjon 👑`,
+  legendary_slayer: (name) => `${name} slo en spiller med enorm ratingforskjell og låste opp en skjult prestasjon ⚡`,
+  double_comeback: (name) => `${name} kom tilbake fra 0-2 i sett og låste opp en skjult prestasjon 🌊`,
+  midnight_marathon: (name) => `${name} spilte en femsettskamp midt på natten og låste opp en skjult prestasjon 🌙`,
 }
 
 function timeAgo(iso: string) {
