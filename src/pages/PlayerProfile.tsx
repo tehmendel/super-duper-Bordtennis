@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Pencil, Skull, Trophy } from 'lucide-react'
+import { Pencil, Skull, Trophy, Swords } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
 import { AchievementBadge } from '@/components/AchievementBadge'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
+import { PlayerTradingCard } from '@/components/PlayerTradingCard'
 import {
   averageSetMargin,
   clutchRate,
@@ -31,6 +32,8 @@ export function PlayerProfile() {
   const { id } = useParams<{ id: string }>()
   const { player: currentPlayer } = useAuth()
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
+  const [challenging, setChallenging] = useState(false)
+  const [challengeSent, setChallengeSent] = useState(false)
   const [player, setPlayer] = useState<Player | null>(null)
   const [rank, setRank] = useState<number | null>(null)
   const [total, setTotal] = useState(0)
@@ -178,11 +181,38 @@ export function PlayerProfile() {
           </div>
           <p className="text-slate-500 dark:text-slate-400">{rank ? `Plass #${rank} av ${total}` : 'Ingen rangering ennå'}</p>
         </div>
-        {currentPlayer?.id === player.id && (
+        {currentPlayer?.id === player.id ? (
           <Link to="/profile/edit" className="btn-secondary py-2 px-3 text-sm">
             <Pencil size={16} /> Rediger
           </Link>
+        ) : (
+          currentPlayer && (
+            <button
+              onClick={async () => {
+                setChallenging(true)
+                await supabase.from('challenges').insert({ challenger_id: currentPlayer.id, challenged_id: player.id })
+                setChallenging(false)
+                setChallengeSent(true)
+              }}
+              disabled={challenging || challengeSent}
+              className="btn-secondary py-2 px-3 text-sm"
+            >
+              <Swords size={16} /> {challengeSent ? 'Utfordring sendt!' : 'Utfordre'}
+            </button>
+          )
         )}
+      </div>
+
+      <div className="flex justify-center">
+        <PlayerTradingCard
+          player={player}
+          title={title}
+          winRate={winRate}
+          matchesPlayed={matches.length}
+          peakRating={peak?.rating ?? null}
+          achievementsEarned={earned.length}
+          achievementsTotal={definitions.length}
+        />
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
