@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/hooks/useTheme'
 import { Layout } from '@/components/Layout'
 import { Login } from '@/pages/Login'
 import { Onboarding } from '@/pages/Onboarding'
@@ -24,6 +25,7 @@ function FullScreenSpinner() {
 
 export default function App() {
   const { session, player, loading } = useAuth()
+  useTheme()
 
   if (loading) return <FullScreenSpinner />
   if (!session) return <Routes><Route path="*" element={<Login />} /></Routes>
