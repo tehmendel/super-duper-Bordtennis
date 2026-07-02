@@ -40,7 +40,7 @@ Kopier `.env.example` til `.env` (allerede gjort lokalt) med Supabase-URL og ano
    - `VITE_SUPABASE_ANON_KEY` = (publishable/anon-nøkkelen, se `.env.example`)
 4. Push til `main` — GitHub Actions-workflowen (`.github/workflows/deploy.yml`) bygger og deployer automatisk.
 
-Appen blir tilgjengelig på `https://tehmendel.github.io/super-duper-bordtennis/`.
+Appen blir tilgjengelig på `https://tehmendel.github.io/super-duper-Bordtennis/`.
 
 ## Sikkerhet: steng offentlig registrering
 
