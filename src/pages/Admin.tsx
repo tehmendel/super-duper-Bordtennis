@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { AdminMatchEditModal } from '@/components/AdminMatchEditModal'
-import type { Match, Player } from '@/lib/types'
+import type { AchievementDefinition, Match, Player, PlayerAchievement } from '@/lib/types'
 
 interface EnrichedMatch extends Match {
   player1: Player
@@ -26,11 +26,15 @@ function StatusPill({ status }: { status: Match['status'] }) {
 
 export function Admin() {
   const { player } = useAuth()
-  const [tab, setTab] = useState<'matches' | 'activity'>('matches')
+  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+
+  const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  const [hiddenDefs, setHiddenDefs] = useState<AchievementDefinition[]>([])
+  const [hiddenEarned, setHiddenEarned] = useState<PlayerAchievement[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -47,6 +51,22 @@ export function Admin() {
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    supabase.from('players').select('*').order('name').then(({ data }) => setAllPlayers(data ?? []))
+    supabase
+      .from('achievement_definitions')
+      .select('*')
+      .eq('hidden', true)
+      .returns<AchievementDefinition[]>()
+      .then(({ data }) => setHiddenDefs(data ?? []))
+    supabase
+      .from('player_achievements')
+      .select('*, achievement:achievement_definitions!inner(*)')
+      .eq('achievement.hidden', true)
+      .returns<PlayerAchievement[]>()
+      .then(({ data }) => setHiddenEarned(data ?? []))
+  }, [])
 
   if (!player?.is_admin) {
     return <p className="text-slate-500 dark:text-slate-400">Du har ikke admin-tilgang.</p>
@@ -106,6 +126,9 @@ export function Admin() {
         <button onClick={() => setTab('activity')} className={tab === 'activity' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
           Aktivitet
         </button>
+        <button onClick={() => setTab('achievements')} className={tab === 'achievements' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
+          Skjulte achievements
+        </button>
       </div>
 
       {loading ? (
@@ -145,7 +168,7 @@ export function Admin() {
             </div>
           ))}
         </div>
-      ) : (
+      ) : tab === 'activity' ? (
         <div className="flex flex-col gap-6">
           <div className="card p-4">
             <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Mest aktive spillere</p>
@@ -184,6 +207,46 @@ export function Admin() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      ) : (
+        <div className="card overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800">
+                <th className="text-left font-medium p-3">Spiller</th>
+                {hiddenDefs.map((d) => (
+                  <th key={d.id} className="p-3 text-center" title={d.description}>
+                    <span className="text-xl">{d.icon}</span>
+                    <div className="text-xs font-normal text-slate-500 dark:text-slate-400">{d.name}</div>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {allPlayers.map((p) => (
+                <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
+                  <td className="p-3">
+                    <div className="flex items-center gap-2">
+                      <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
+                      <span className="truncate">{p.name}</span>
+                    </div>
+                  </td>
+                  {hiddenDefs.map((d) => {
+                    const earned = hiddenEarned.find((e) => e.player_id === p.id && e.achievement_id === d.id)
+                    return (
+                      <td key={d.id} className="p-3 text-center">
+                        {earned ? (
+                          <span title={new Date(earned.earned_at).toLocaleDateString('no-NO')}>✅</span>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-700">—</span>
+                        )}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

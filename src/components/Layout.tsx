@@ -9,7 +9,7 @@ const PRIMARY_NAV_ITEMS = [
   { to: '/matches/new', label: 'Ny kamp', icon: PlusCircle, end: false },
   { to: '/matches/pending', label: 'Bekreftelser', icon: CheckCircle2, end: false },
   { to: '/matches', label: 'Historikk', icon: History, end: true },
-  { to: '/leaderboard', label: 'Topplist', icon: Trophy, end: false },
+  { to: '/leaderboard', label: 'Toppliste', icon: Trophy, end: false },
 ]
 
 const SECONDARY_NAV_ITEMS = [

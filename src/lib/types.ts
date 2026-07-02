@@ -50,6 +50,7 @@ export interface AchievementDefinition {
   name: string
   description: string
   icon: string
+  hidden: boolean
 }
 
 export interface PlayerAchievement {

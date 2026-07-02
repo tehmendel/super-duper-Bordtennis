@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
+import { HiddenAchievementFeed } from '@/components/HiddenAchievementFeed'
 import type { LeaderboardRow, Match, Player } from '@/lib/types'
 
 interface MatchOfWeek {
@@ -130,6 +131,8 @@ export function Dashboard() {
           )}
         </Link>
       </div>
+
+      <HiddenAchievementFeed />
 
       {matchOfWeek && (
         <div className="card p-5">

@@ -1,8 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Bell, BellOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { pushSupported, getExistingSubscription, enablePushNotifications, disablePushNotifications } from '@/lib/push'
 
 export function EditProfile() {
   const { player, session, refreshPlayer } = useAuth()
@@ -13,6 +15,32 @@ export function EditProfile() {
   const [preview, setPreview] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [pushEnabled, setPushEnabled] = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const [pushError, setPushError] = useState<string | null>(null)
+
+  useEffect(() => {
+    getExistingSubscription().then((sub) => setPushEnabled(!!sub))
+  }, [])
+
+  async function togglePush() {
+    if (!player) return
+    setPushBusy(true)
+    setPushError(null)
+    try {
+      if (pushEnabled) {
+        await disablePushNotifications()
+        setPushEnabled(false)
+      } else {
+        await enablePushNotifications(player.id)
+        setPushEnabled(true)
+      }
+    } catch (err) {
+      setPushError(err instanceof Error ? err.message : 'Noe gikk galt')
+    }
+    setPushBusy(false)
+  }
 
   if (!player || !session) return null
 
@@ -88,6 +116,20 @@ export function EditProfile() {
           {saving ? 'Lagrer...' : 'Lagre endringer'}
         </button>
       </form>
+
+      {pushSupported() && (
+        <div className="card p-5 flex flex-col gap-2">
+          <p className="text-sm font-semibold">Push-varsler</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Få et varsel på mobilen/PC-en når noen registrerer en kamp du må bekrefte.
+          </p>
+          {pushError && <p className="text-sm text-rose-600">{pushError}</p>}
+          <button onClick={togglePush} disabled={pushBusy} className={pushEnabled ? 'btn-secondary' : 'btn-primary'}>
+            {pushEnabled ? <BellOff size={16} /> : <Bell size={16} />}
+            {pushBusy ? 'Vent...' : pushEnabled ? 'Skru av varsler' : 'Skru på varsler'}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

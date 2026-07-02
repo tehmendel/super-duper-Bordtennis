@@ -85,7 +85,7 @@ export function Leaderboard() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold">Topplist</h1>
+          <h1 className="text-2xl font-bold">Toppliste</h1>
           {seasonName && <p className="text-sm text-slate-500 dark:text-slate-400">{seasonName}</p>}
         </div>
         <div className="flex gap-1">
