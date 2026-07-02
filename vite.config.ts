@@ -19,7 +19,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Ivolv Bordtennis',
+        name: 'Super Duper Bordtennis',
         short_name: 'Bordtennis',
         description: 'Kampstatistikk og topplister for kontorets bordtennis-liga',
         theme_color: '#0f172a',

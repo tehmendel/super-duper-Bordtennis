@@ -11,6 +11,8 @@ import { Leaderboard } from '@/pages/Leaderboard'
 import { PlayerProfile } from '@/pages/PlayerProfile'
 import { HeadToHead } from '@/pages/HeadToHead'
 import { QrCodePage } from '@/pages/QrCodePage'
+import { InvitePlayer } from '@/pages/InvitePlayer'
+import { MorePage } from '@/pages/MorePage'
 
 function FullScreenSpinner() {
   return (
@@ -38,6 +40,8 @@ export default function App() {
         <Route path="/players/:id" element={<PlayerProfile />} />
         <Route path="/head-to-head" element={<HeadToHead />} />
         <Route path="/qr" element={<QrCodePage />} />
+        <Route path="/invite" element={<InvitePlayer />} />
+        <Route path="/more" element={<MorePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

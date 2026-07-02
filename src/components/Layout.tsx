@@ -1,17 +1,26 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 
-const NAV_ITEMS = [
+const PRIMARY_NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: Home, end: true },
   { to: '/matches/new', label: 'Ny kamp', icon: PlusCircle, end: false },
   { to: '/matches/pending', label: 'Bekreftelser', icon: CheckCircle2, end: false },
   { to: '/matches', label: 'Historikk', icon: History, end: true },
   { to: '/leaderboard', label: 'Topplist', icon: Trophy, end: false },
+]
+
+const SECONDARY_NAV_ITEMS = [
   { to: '/head-to-head', label: 'Head-to-head', icon: Swords, end: false },
   { to: '/qr', label: 'QR', icon: QrCode, end: false },
+  { to: '/invite', label: 'Inviter spiller', icon: UserPlus, end: false },
+]
+
+const MOBILE_NAV_ITEMS = [
+  ...PRIMARY_NAV_ITEMS,
+  { to: '/more', label: 'Mer', icon: MoreHorizontal, end: false },
 ]
 
 export function Layout() {
@@ -21,8 +30,24 @@ export function Layout() {
   return (
     <div className="min-h-dvh flex flex-col md:flex-row">
       <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:dark:border-slate-800 md:p-4 md:gap-2">
-        <div className="px-2 py-3 text-lg font-bold">🏓 Ivolv Bordtennis</div>
-        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+        <div className="px-2 py-3 text-lg font-bold">🏓 Super Duper Bordtennis</div>
+        {PRIMARY_NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={end}
+            className={({ isActive }) =>
+              `flex items-center gap-3 rounded-xl px-3 py-2.5 font-medium transition ${
+                isActive ? 'bg-brand-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`
+            }
+          >
+            <Icon size={18} />
+            {label}
+          </NavLink>
+        ))}
+        <hr className="my-2 border-slate-200 dark:border-slate-800" />
+        {SECONDARY_NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -56,7 +81,7 @@ export function Layout() {
       </aside>
 
       <header className="flex items-center justify-between p-4 md:hidden border-b border-slate-200 dark:border-slate-800">
-        <span className="text-lg font-bold">🏓 Ivolv Bordtennis</span>
+        <span className="text-lg font-bold">🏓 Super Duper Bordtennis</span>
         <div className="flex items-center gap-1">
           <button onClick={toggle} className="btn-ghost p-2">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
@@ -74,7 +99,7 @@ export function Layout() {
       </main>
 
       <nav className="fixed bottom-0 inset-x-0 z-40 grid grid-cols-6 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur md:hidden">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+        {MOBILE_NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}

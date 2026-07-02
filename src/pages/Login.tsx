@@ -13,18 +13,26 @@ export function Login() {
     setError(null)
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.origin + import.meta.env.BASE_URL },
+      options: {
+        emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
+        shouldCreateUser: false,
+      },
     })
     setLoading(false)
-    if (error) setError(error.message)
-    else setSent(true)
+    if (error) {
+      setError(
+        /not.*allow|signup/i.test(error.message)
+          ? 'Denne e-postadressen er ikke invitert ennå. Be en admin om en invitasjon.'
+          : error.message,
+      )
+    } else setSent(true)
   }
 
   return (
     <div className="min-h-dvh flex items-center justify-center p-4">
       <div className="card w-full max-w-sm p-8 text-center">
         <div className="text-4xl mb-2">🏓</div>
-        <h1 className="text-xl font-bold mb-1">Ivolv Bordtennis</h1>
+        <h1 className="text-xl font-bold mb-1">Super Duper Bordtennis</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
           Logg inn med jobb-e-posten din for å registrere kamper og se statistikk.
         </p>
