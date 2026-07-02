@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, CheckCircle2, TrendingUp, TrendingDown, Hourglass, Target, Clock3, History as HistoryIcon, Shuffle } from 'lucide-react'
+import { PlusCircle, CheckCircle2, TrendingUp, TrendingDown, Hourglass, Target, Clock3, Shuffle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
 import { HiddenAchievementFeed } from '@/components/HiddenAchievementFeed'
 import { PlayerOfTheWeek } from '@/components/PlayerOfTheWeek'
+import { CardHeader } from '@/components/CardHeader'
+import { useCardLayout, type CardDef } from '@/hooks/useCardLayout'
 import type { LeaderboardRow, Match, Player, Season } from '@/lib/types'
 
 interface MatchOfWeek {
@@ -18,8 +20,17 @@ interface MatchOfWeek {
 
 const MILESTONES = [10, 25, 50, 100, 250, 500]
 
+const CARD_DEFS: CardDef[] = [
+  { id: 'season_countdown', title: 'Sesong-nedtelling' },
+  { id: 'milestone', title: 'Milepæl' },
+  { id: 'inactivity', title: 'Ikke spilt på en stund' },
+  { id: 'past_match', title: 'Kamp fra fortiden' },
+  { id: 'match_of_week', title: '🌟 Ukens kamp' },
+]
+
 export function Dashboard() {
   const { player } = useAuth()
+  const layout = useCardLayout('dashboard', CARD_DEFS)
   const [rank, setRank] = useState<number | null>(null)
   const [totalPlayers, setTotalPlayers] = useState(0)
   const [form, setForm] = useState<('W' | 'L')[]>([])
@@ -137,6 +148,118 @@ export function Dashboard() {
 
   if (!player) return null
 
+  function renderCard(id: string) {
+    switch (id) {
+      case 'season_countdown':
+        if (!season?.target_end_date) return null
+        return (
+          <div key={id} className="card p-5">
+            <CardHeader layout={layout} cardId={id} className="hidden" />
+            <div className="flex items-center gap-3">
+              <Hourglass size={22} className="text-violet-500 shrink-0" />
+              <p className="text-sm">
+                <strong>{Math.max(0, Math.ceil((new Date(season.target_end_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))} dager</strong> igjen av {season.name}
+                {pointsBehindLeader && (
+                  <> — du er <strong>{pointsBehindLeader.points} poeng</strong> bak {pointsBehindLeader.name} på 1. plass!</>
+                )}
+              </p>
+            </div>
+          </div>
+        )
+      case 'milestone': {
+        const nextMilestone = MILESTONES.find((m) => m - totalMatchesPlayed >= 1 && m - totalMatchesPlayed <= 2)
+        if (!nextMilestone) return null
+        const remaining = nextMilestone - totalMatchesPlayed
+        return (
+          <div key={id} className="card p-5">
+            <CardHeader layout={layout} cardId={id} className="hidden" />
+            <div className="flex items-center gap-3">
+              <Target size={22} className="text-brand-600 shrink-0" />
+              <p className="text-sm">
+                Du er <strong>{remaining} kamp{remaining > 1 ? 'er' : ''}</strong> unna <strong>{nextMilestone} totalt</strong>! 🎯
+              </p>
+            </div>
+          </div>
+        )
+      }
+      case 'inactivity':
+        if (daysSinceLastMatch === null || daysSinceLastMatch < 14) return null
+        return (
+          <div key={id} className="card p-5">
+            <CardHeader layout={layout} cardId={id} className="hidden" />
+            <div className="flex items-center gap-3">
+              <Clock3 size={22} className="text-amber-500 shrink-0" />
+              <p className="text-sm">
+                Det er <strong>{daysSinceLastMatch} dager</strong> siden sist du spilte en kamp. På tide med en runde? 🏓
+              </p>
+            </div>
+          </div>
+        )
+      case 'past_match': {
+        if (ownMatches.length === 0 || !ownMatches[pastMatchIndex]) return null
+        const m = ownMatches[pastMatchIndex]
+        const won = m.winner_id === player!.id
+        const isP1 = m.player1_id === player!.id
+        const myScore = isP1 ? m.sets_won_player1 : m.sets_won_player2
+        const oppScore = isP1 ? m.sets_won_player2 : m.sets_won_player1
+        return (
+          <div key={id} className="card p-5">
+            <div className="flex items-center justify-between mb-2">
+              <CardHeader layout={layout} cardId={id} className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2" />
+              {!layout.editMode && (
+                <button
+                  onClick={() => setPastMatchIndex(Math.floor(Math.random() * ownMatches.length))}
+                  className="btn-ghost p-1.5"
+                  title="Vis en annen"
+                >
+                  <Shuffle size={14} />
+                </button>
+              )}
+            </div>
+            <p className="text-sm">
+              Den {new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO', { day: 'numeric', month: 'long', year: 'numeric' })}{' '}
+              {won ? 'slo du' : 'tapte du mot'}{' '}
+              <Link to={`/players/${m.opponent.id}`} className="font-semibold text-brand-600 hover:underline">
+                {m.opponent.name}
+              </Link>{' '}
+              {myScore}–{oppScore}
+            </p>
+          </div>
+        )
+      }
+      case 'match_of_week':
+        if (!matchOfWeek) return null
+        return (
+          <div key={id} className="card p-5">
+            <CardHeader layout={layout} cardId={id} />
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <PlayerAvatar name={matchOfWeek.player1.name} avatarUrl={matchOfWeek.player1.avatar_url} size="sm" />
+                <span className={matchOfWeek.match.winner_id === matchOfWeek.player1.id ? 'font-bold' : 'text-slate-500'}>
+                  {matchOfWeek.player1.name}
+                </span>
+              </div>
+              <span className="text-sm font-mono text-slate-500">
+                {matchOfWeek.match.sets_won_player1}–{matchOfWeek.match.sets_won_player2}
+              </span>
+              <div className="flex items-center gap-2">
+                <span className={matchOfWeek.match.winner_id === matchOfWeek.player2.id ? 'font-bold' : 'text-slate-500'}>
+                  {matchOfWeek.player2.name}
+                </span>
+                <PlayerAvatar name={matchOfWeek.player2.name} avatarUrl={matchOfWeek.player2.avatar_url} size="sm" />
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
+              {matchOfWeek.delta > 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-rose-500" />}
+              Størst rating-endring denne uken ({matchOfWeek.delta > 0 ? '+' : ''}{Math.round(matchOfWeek.delta)})
+            </div>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
@@ -176,103 +299,9 @@ export function Dashboard() {
         </Link>
       </div>
 
-      {season?.target_end_date && (
-        <div className="card p-5 flex items-center gap-3">
-          <Hourglass size={22} className="text-violet-500 shrink-0" />
-          <p className="text-sm">
-            <strong>{Math.max(0, Math.ceil((new Date(season.target_end_date).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))} dager</strong> igjen av {season.name}
-            {pointsBehindLeader && (
-              <> — du er <strong>{pointsBehindLeader.points} poeng</strong> bak {pointsBehindLeader.name} på 1. plass!</>
-            )}
-          </p>
-        </div>
-      )}
-
-      {(() => {
-        const nextMilestone = MILESTONES.find((m) => m - totalMatchesPlayed >= 1 && m - totalMatchesPlayed <= 2)
-        if (!nextMilestone) return null
-        const remaining = nextMilestone - totalMatchesPlayed
-        return (
-          <div className="card p-5 flex items-center gap-3">
-            <Target size={22} className="text-brand-600 shrink-0" />
-            <p className="text-sm">
-              Du er <strong>{remaining} kamp{remaining > 1 ? 'er' : ''}</strong> unna <strong>{nextMilestone} totalt</strong>! 🎯
-            </p>
-          </div>
-        )
-      })()}
-
-      {daysSinceLastMatch !== null && daysSinceLastMatch >= 14 && (
-        <div className="card p-5 flex items-center gap-3">
-          <Clock3 size={22} className="text-amber-500 shrink-0" />
-          <p className="text-sm">
-            Det er <strong>{daysSinceLastMatch} dager</strong> siden sist du spilte en kamp. På tide med en runde? 🏓
-          </p>
-        </div>
-      )}
-
-      {ownMatches.length > 0 && ownMatches[pastMatchIndex] && (
-        <div className="card p-5">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <HistoryIcon size={16} /> Kamp fra fortiden
-            </p>
-            <button
-              onClick={() => setPastMatchIndex(Math.floor(Math.random() * ownMatches.length))}
-              className="btn-ghost p-1.5"
-              title="Vis en annen"
-            >
-              <Shuffle size={14} />
-            </button>
-          </div>
-          {(() => {
-            const m = ownMatches[pastMatchIndex]
-            const won = m.winner_id === player.id
-            const isP1 = m.player1_id === player.id
-            const myScore = isP1 ? m.sets_won_player1 : m.sets_won_player2
-            const oppScore = isP1 ? m.sets_won_player2 : m.sets_won_player1
-            return (
-              <p className="text-sm">
-                Den {new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO', { day: 'numeric', month: 'long', year: 'numeric' })}{' '}
-                {won ? 'slo du' : 'tapte du mot'}{' '}
-                <Link to={`/players/${m.opponent.id}`} className="font-semibold text-brand-600 hover:underline">
-                  {m.opponent.name}
-                </Link>{' '}
-                {myScore}–{oppScore}
-              </p>
-            )
-          })()}
-        </div>
-      )}
+      {layout.orderedIds.map((id) => renderCard(id))}
 
       <HiddenAchievementFeed />
-
-      {matchOfWeek && (
-        <div className="card p-5">
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">🌟 Ukens kamp</p>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <PlayerAvatar name={matchOfWeek.player1.name} avatarUrl={matchOfWeek.player1.avatar_url} size="sm" />
-              <span className={matchOfWeek.match.winner_id === matchOfWeek.player1.id ? 'font-bold' : 'text-slate-500'}>
-                {matchOfWeek.player1.name}
-              </span>
-            </div>
-            <span className="text-sm font-mono text-slate-500">
-              {matchOfWeek.match.sets_won_player1}–{matchOfWeek.match.sets_won_player2}
-            </span>
-            <div className="flex items-center gap-2">
-              <span className={matchOfWeek.match.winner_id === matchOfWeek.player2.id ? 'font-bold' : 'text-slate-500'}>
-                {matchOfWeek.player2.name}
-              </span>
-              <PlayerAvatar name={matchOfWeek.player2.name} avatarUrl={matchOfWeek.player2.avatar_url} size="sm" />
-            </div>
-          </div>
-          <div className="mt-3 flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
-            {matchOfWeek.delta > 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-rose-500" />}
-            Størst rating-endring denne uken ({matchOfWeek.delta > 0 ? '+' : ''}{Math.round(matchOfWeek.delta)})
-          </div>
-        </div>
-      )}
     </div>
   )
 }

@@ -1,14 +1,23 @@
 import { useEffect, useState } from 'react'
-import { Zap, Sparkles } from 'lucide-react'
+import { Zap } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { CardHeader } from '@/components/CardHeader'
+import { useCardLayout, type CardDef } from '@/hooks/useCardLayout'
 import { suggestedHandicap } from '@/lib/handicap'
 import { eloWinProbability } from '@/lib/stats'
 import type { Match, Player } from '@/lib/types'
 
+const CARD_DEFS: CardDef[] = [
+  { id: 'record', title: 'Head-to-head rekord' },
+  { id: 'elo_odds', title: 'Hva om de møttes i dag?' },
+  { id: 'handicap', title: 'Håndikapp-forslag' },
+]
+
 export function HeadToHead() {
   const { player } = useAuth()
+  const layout = useCardLayout('head_to_head', CARD_DEFS)
   const [players, setPlayers] = useState<Player[]>([])
   const [aId, setAId] = useState('')
   const [bId, setBId] = useState('')
@@ -68,60 +77,74 @@ export function HeadToHead() {
 
       {a && b && !loading && (
         <>
-          <div className="card p-6 flex items-center justify-around text-center">
-            <div className="flex flex-col items-center gap-2">
-              <PlayerAvatar name={a.name} avatarUrl={a.avatar_url} size="lg" />
-              <p className="font-semibold">{a.name}</p>
-              <p className="text-3xl font-bold text-brand-600">{aWins}</p>
-              <p className="text-xs text-slate-500">{aSets} sett</p>
-            </div>
-            <p className="text-slate-400 font-bold">–</p>
-            <div className="flex flex-col items-center gap-2">
-              <PlayerAvatar name={b.name} avatarUrl={b.avatar_url} size="lg" />
-              <p className="font-semibold">{b.name}</p>
-              <p className="text-3xl font-bold text-brand-600">{bWins}</p>
-              <p className="text-xs text-slate-500">{bSets} sett</p>
-            </div>
-          </div>
-
-          {matches.length > 0 && (
-            <p className="text-center text-sm text-slate-500 dark:text-slate-400">
-              {aWins === bWins
-                ? 'Helt jevnt løp mellom dem 🤝'
-                : `${aWins > bWins ? a.name : b.name} dominerer oppgjøret ${Math.max(aWins, bWins)}–${Math.min(aWins, bWins)} 🔥`}
-            </p>
-          )}
-
-          <div className="card p-5 flex flex-col items-center gap-3">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <Sparkles size={16} className="text-violet-500" /> Hva om de møttes i dag?
-            </p>
-            <div className="flex items-center justify-around w-full">
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-medium text-sm">{a.name}</span>
-                <span className="text-2xl font-bold text-brand-600">{Math.round(eloWinProbability(a.rating, b.rating) * 100)}%</span>
-              </div>
-              <span className="text-slate-400 font-bold">vs</span>
-              <div className="flex flex-col items-center gap-1">
-                <span className="font-medium text-sm">{b.name}</span>
-                <span className="text-2xl font-bold text-brand-600">{Math.round((1 - eloWinProbability(a.rating, b.rating)) * 100)}%</span>
-              </div>
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-              Basert på Elo-rating ({Math.round(a.rating)} mot {Math.round(b.rating)})
-            </p>
-          </div>
-
-          {a.rating !== b.rating && (
-            <div className="card p-4 flex items-center gap-3">
-              <Zap size={20} className="text-amber-500 shrink-0" />
-              <p className="text-sm">
-                Håndikapp-forslag for en jevnere uformell kamp: <strong>{a.rating > b.rating ? b.name : a.name}</strong> starter med{' '}
-                <strong>{suggestedHandicap(a.rating, b.rating)} poeng</strong> forsprang i et vanlig 11-poengs sett
-                <span className="text-slate-400"> (basert på ratingforskjell på {Math.round(Math.abs(a.rating - b.rating))})</span>.
-              </p>
-            </div>
-          )}
+          {layout.orderedIds.map((id) => {
+            if (id === 'record') {
+              return (
+                <div key={id} className="card p-6">
+                  <CardHeader layout={layout} cardId={id} />
+                  <div className="flex items-center justify-around text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <PlayerAvatar name={a.name} avatarUrl={a.avatar_url} size="lg" />
+                      <p className="font-semibold">{a.name}</p>
+                      <p className="text-3xl font-bold text-brand-600">{aWins}</p>
+                      <p className="text-xs text-slate-500">{aSets} sett</p>
+                    </div>
+                    <p className="text-slate-400 font-bold">–</p>
+                    <div className="flex flex-col items-center gap-2">
+                      <PlayerAvatar name={b.name} avatarUrl={b.avatar_url} size="lg" />
+                      <p className="font-semibold">{b.name}</p>
+                      <p className="text-3xl font-bold text-brand-600">{bWins}</p>
+                      <p className="text-xs text-slate-500">{bSets} sett</p>
+                    </div>
+                  </div>
+                  {matches.length > 0 && (
+                    <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-3">
+                      {aWins === bWins
+                        ? 'Helt jevnt løp mellom dem 🤝'
+                        : `${aWins > bWins ? a.name : b.name} dominerer oppgjøret ${Math.max(aWins, bWins)}–${Math.min(aWins, bWins)} 🔥`}
+                    </p>
+                  )}
+                </div>
+              )
+            }
+            if (id === 'elo_odds') {
+              return (
+                <div key={id} className="card p-5 flex flex-col items-center gap-3">
+                  <CardHeader layout={layout} cardId={id} className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2" />
+                  <div className="flex items-center justify-around w-full">
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="font-medium text-sm">{a.name}</span>
+                      <span className="text-2xl font-bold text-brand-600">{Math.round(eloWinProbability(a.rating, b.rating) * 100)}%</span>
+                    </div>
+                    <span className="text-slate-400 font-bold">vs</span>
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="font-medium text-sm">{b.name}</span>
+                      <span className="text-2xl font-bold text-brand-600">{Math.round((1 - eloWinProbability(a.rating, b.rating)) * 100)}%</span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                    Basert på Elo-rating ({Math.round(a.rating)} mot {Math.round(b.rating)})
+                  </p>
+                </div>
+              )
+            }
+            if (id === 'handicap' && a.rating !== b.rating) {
+              return (
+                <div key={id} className="card p-4">
+                  <CardHeader layout={layout} cardId={id} className="hidden" />
+                  <div className="flex items-center gap-3">
+                    <Zap size={20} className="text-amber-500 shrink-0" />
+                    <p className="text-sm">
+                      Håndikapp-forslag for en jevnere uformell kamp: <strong>{a.rating > b.rating ? b.name : a.name}</strong> starter med{' '}
+                      <strong>{suggestedHandicap(a.rating, b.rating)} poeng</strong> forsprang i et vanlig 11-poengs sett
+                      <span className="text-slate-400"> (basert på ratingforskjell på {Math.round(Math.abs(a.rating - b.rating))})</span>.
+                    </p>
+                  </div>
+                </div>
+              )
+            }
+            return null
+          })}
 
           {matches.length === 0 ? (
             <p className="text-slate-500 dark:text-slate-400">Ingen kamper spilt mot hverandre ennå.</p>

@@ -1,7 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, ShieldCheck, Calendar, Medal, BarChart3, Crown } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, ShieldCheck, Calendar, Medal, BarChart3, Crown, LayoutGrid, Check } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
+import { useLayoutEdit } from '@/contexts/LayoutEditContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import type { PageKey } from '@/lib/types'
 
@@ -28,6 +29,7 @@ const MOBILE_EXTRA_ITEM = { to: '/more', label: 'Mer', icon: MoreHorizontal, end
 export function Layout() {
   const { player, signOut, hasAccess } = useAuth()
   const { theme, toggle } = useTheme()
+  const { editMode, toggle: toggleEditMode } = useLayoutEdit()
 
   const visiblePrimary = PRIMARY_NAV_ITEMS.filter((item) => hasAccess(item.pageKey))
   const visibleSecondary = SECONDARY_NAV_ITEMS.filter((item) => hasAccess(item.pageKey))
@@ -139,6 +141,18 @@ export function Layout() {
           </NavLink>
         ))}
       </nav>
+
+      {player?.is_admin && (
+        <button
+          onClick={toggleEditMode}
+          className={`fixed bottom-20 md:bottom-6 right-4 z-50 rounded-full p-3 shadow-lg ${
+            editMode ? 'bg-emerald-600 text-white' : 'bg-brand-600 text-white'
+          }`}
+          title={editMode ? 'Avslutt redigering av sider' : 'Rediger kort og titler'}
+        >
+          {editMode ? <Check size={20} /> : <LayoutGrid size={20} />}
+        </button>
+      )}
     </div>
   )
 }

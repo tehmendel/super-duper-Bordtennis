@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Crown, Flame, TrendingUp, CalendarDays } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { CardHeader } from '@/components/CardHeader'
+import { useCardLayout, type CardDef } from '@/hooks/useCardLayout'
 import { biggestUpsetEver, longestWinStreakEver, mostMatchesInOneDay, peakRating } from '@/lib/stats'
 import type { Match, Player, RatingHistoryEntry } from '@/lib/types'
 
@@ -11,7 +13,15 @@ interface HofRecord<T> {
   value: T
 }
 
+const CARD_DEFS: CardDef[] = [
+  { id: 'upset', title: 'Størst upset noensinne' },
+  { id: 'streak', title: 'Lengste seiersrekke noensinne' },
+  { id: 'peak', title: 'Høyeste rating noensinne' },
+  { id: 'one_day', title: 'Flest kamper på én dag' },
+]
+
 export function HallOfFame() {
+  const layout = useCardLayout('hall_of_fame', CARD_DEFS)
   const [players, setPlayers] = useState<Player[]>([])
   const [matches, setMatches] = useState<Match[]>([])
   const [history, setHistory] = useState<RatingHistoryEntry[]>([])
@@ -57,29 +67,26 @@ export function HallOfFame() {
   const upset = biggestUpsetEver(matches, historyByMatch)
   const upsetWinner = upset ? players.find((p) => p.id === upset.match.winner_id) : null
 
-  const records = [
-    longestStreak && {
+  const recordsById: Record<string, { icon: typeof Flame; color: string; player: Player; description: string } | null> = {
+    streak: longestStreak && {
       icon: Flame,
       color: 'text-orange-500',
-      title: 'Lengste seiersrekke noensinne',
       player: longestStreak.player,
       description: `${longestStreak.value} seire på rad`,
     },
-    highestPeak && {
+    peak: highestPeak && {
       icon: TrendingUp,
       color: 'text-emerald-500',
-      title: 'Høyeste rating noensinne',
       player: highestPeak.player,
       description: `${Math.round(highestPeak.value.rating)} poeng (${new Date(highestPeak.value.date).toLocaleDateString('no-NO')})`,
     },
-    mostInOneDay && {
+    one_day: mostInOneDay && {
       icon: CalendarDays,
       color: 'text-blue-500',
-      title: 'Flest kamper på én dag',
       player: mostInOneDay.player,
       description: `${mostInOneDay.value.count} kamper${mostInOneDay.value.day ? ` (${new Date(mostInOneDay.value.day).toLocaleDateString('no-NO')})` : ''}`,
     },
-  ].filter((r): r is NonNullable<typeof r> => !!r)
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -88,28 +95,33 @@ export function HallOfFame() {
         <h1 className="text-2xl font-bold">Hall of Fame</h1>
       </div>
 
-      {upset && upsetWinner && (
-        <div className="card p-5 flex items-center gap-3">
-          <Flame size={22} className="text-rose-500 shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-semibold">Størst upset noensinne</p>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              <Link to={`/players/${upsetWinner.id}`} className="font-semibold text-brand-600 hover:underline">
-                {upsetWinner.name}
-              </Link>{' '}
-              vant som underdog med {Math.round(upset.margin)} poengs ratingforskjell
-            </p>
-          </div>
-        </div>
-      )}
+      {layout.orderedIds.map((id) => {
+        if (id === 'upset') {
+          if (!upset || !upsetWinner) return null
+          return (
+            <div key={id} className="card p-5 flex items-center gap-3">
+              <Flame size={22} className="text-rose-500 shrink-0" />
+              <div className="flex-1">
+                <CardHeader layout={layout} cardId={id} className="text-sm font-semibold mb-1" />
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <Link to={`/players/${upsetWinner.id}`} className="font-semibold text-brand-600 hover:underline">
+                    {upsetWinner.name}
+                  </Link>{' '}
+                  vant som underdog med {Math.round(upset.margin)} poengs ratingforskjell
+                </p>
+              </div>
+            </div>
+          )
+        }
 
-      <div className="grid gap-4">
-        {records.map((r) => (
-          <div key={r.title} className="card p-5 flex items-center gap-4">
+        const r = recordsById[id]
+        if (!r) return null
+        return (
+          <div key={id} className="card p-5 flex items-center gap-4">
             <r.icon size={28} className={`${r.color} shrink-0`} />
             <PlayerAvatar name={r.player.name} avatarUrl={r.player.avatar_url} />
             <div className="flex-1">
-              <p className="text-sm font-semibold">{r.title}</p>
+              <CardHeader layout={layout} cardId={id} className="text-sm font-semibold mb-1" />
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 <Link to={`/players/${r.player.id}`} className="font-semibold text-brand-600 hover:underline">
                   {r.player.name}
@@ -118,8 +130,8 @@ export function HallOfFame() {
               </p>
             </div>
           </div>
-        ))}
-      </div>
+        )
+      })}
     </div>
   )
 }
