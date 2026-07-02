@@ -36,13 +36,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setPermissions({}) // is_admin bypasses permission checks entirely (see hasAccess)
       return
     }
-    const { data: assignments } = await supabase.from('role_assignments').select('role_id').eq('player_id', currentPlayer.id)
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('role_assignments')
+      .select('role_id')
+      .eq('player_id', currentPlayer.id)
+    if (assignmentsError) {
+      console.error('Kunne ikke laste rolletildelinger, beholder gjeldende tilganger', assignmentsError)
+      return
+    }
     const roleIds = (assignments ?? []).map((a) => a.role_id)
     if (roleIds.length === 0) {
       setPermissions({})
       return
     }
-    const { data: perms } = await supabase.from('role_permissions').select('*').in('role_id', roleIds)
+    const { data: perms, error: permsError } = await supabase.from('role_permissions').select('*').in('role_id', roleIds)
+    if (permsError) {
+      console.error('Kunne ikke laste rolletilganger, beholder gjeldende tilganger', permsError)
+      return
+    }
     const merged: Partial<Record<PageKey, AccessLevel>> = {}
     perms?.forEach((p) => {
       const key = p.page_key as PageKey

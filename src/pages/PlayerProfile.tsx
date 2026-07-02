@@ -25,8 +25,7 @@ import {
   type MatchWithSets,
 } from '@/lib/stats'
 import type { AchievementDefinition, LeaderboardRow, Match, MatchSet, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
-
-const WEEKDAY_NAMES = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør']
+import { WEEKDAY_NAMES } from '@/lib/constants'
 
 export function PlayerProfile() {
   const { id } = useParams<{ id: string }>()
@@ -44,7 +43,7 @@ export function PlayerProfile() {
   const [players, setPlayers] = useState<Player[]>([])
   const [earned, setEarned] = useState<PlayerAchievement[]>([])
   const [definitions, setDefinitions] = useState<AchievementDefinition[]>([])
-  const [allAchievementsEarned, setAllAchievementsEarned] = useState<PlayerAchievement[]>([])
+  const [allAchievementsEarned, setAllAchievementsEarned] = useState<Pick<PlayerAchievement, 'player_id' | 'achievement_id'>[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -66,7 +65,7 @@ export function PlayerProfile() {
         supabase.from('player_achievements').select('*').eq('player_id', id).returns<PlayerAchievement[]>(),
         supabase.from('achievement_definitions').select('*').returns<AchievementDefinition[]>(),
         supabase.from('players').select('*').returns<Player[]>(),
-        supabase.from('player_achievements').select('*').returns<PlayerAchievement[]>(),
+        supabase.from('player_achievements').select('player_id, achievement_id').returns<Pick<PlayerAchievement, 'player_id' | 'achievement_id'>[]>(),
       ])
 
       if (cancelled) return
@@ -212,6 +211,8 @@ export function PlayerProfile() {
           peakRating={peak?.rating ?? null}
           achievementsEarned={earned.length}
           achievementsTotal={definitions.length}
+          rank={rank}
+          totalPlayers={total}
         />
       </div>
 

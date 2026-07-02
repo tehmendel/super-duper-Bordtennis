@@ -50,8 +50,10 @@ export function ChallengeFeed() {
   }, [player])
 
   async function dismiss(id: string) {
+    const removed = incoming.find((c) => c.id === id)
     setIncoming((prev) => prev.filter((c) => c.id !== id))
-    await supabase.from('challenges').update({ status: 'dismissed' }).eq('id', id)
+    const { error } = await supabase.from('challenges').update({ status: 'dismissed' }).eq('id', id)
+    if (error && removed) setIncoming((prev) => [...prev, removed].sort((a, b) => b.created_at.localeCompare(a.created_at)))
   }
 
   if (incoming.length === 0 && outgoing.length === 0) return null

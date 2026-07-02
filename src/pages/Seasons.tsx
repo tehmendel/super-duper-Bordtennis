@@ -2,8 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import type { LeaderboardRow, Player, Season, SeasonStanding } from '@/lib/types'
-
-const MEDALS = ['🥇', '🥈', '🥉']
+import { MEDALS } from '@/lib/constants'
 
 interface StandingRow {
   id: string

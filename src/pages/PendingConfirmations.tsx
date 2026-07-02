@@ -52,7 +52,11 @@ export function PendingConfirmations() {
         .eq('match_id', matchId)
         .eq('player_id', player.id)
       if (earned && earned.length > 0) {
-        setNewAchievements(earned.map((e) => e.achievement as AchievementDefinition))
+        setNewAchievements(
+          earned
+            .map((e) => e.achievement as AchievementDefinition | null)
+            .filter((a): a is AchievementDefinition => a !== null),
+        )
       }
     }
     setBusyId(null)

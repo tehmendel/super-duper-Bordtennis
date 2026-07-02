@@ -16,10 +16,9 @@ import {
   previousRatingSnapshot,
 } from '@/lib/stats'
 import type { LeaderboardRow, Match, Player, RatingHistoryEntry, Season, SeasonStanding } from '@/lib/types'
+import { MEDALS } from '@/lib/constants'
 
 type Period = 'all' | 'month' | 'quarter' | 'season'
-
-const MEDALS = ['🥇', '🥈', '🥉']
 
 interface Row extends LeaderboardRow {
   periodDelta: number
@@ -57,12 +56,10 @@ export function Leaderboard() {
   const [allHistory, setAllHistory] = useState<RatingHistoryEntry[]>([])
 
   useEffect(() => {
-    supabase.from('seasons').select('name').eq('is_active', true).maybeSingle().then(({ data }) => {
-      if (data) setSeasonName(data.name)
-    })
     supabase.from('seasons').select('*').order('started_at', { ascending: false }).returns<Season[]>().then(({ data }) => {
       setSeasons(data ?? [])
       const active = data?.find((s) => s.is_active)
+      setSeasonName(active?.name ?? '')
       setSelectedSeasonId(active?.id ?? data?.[0]?.id ?? '')
     })
     Promise.all([
@@ -134,10 +131,9 @@ export function Leaderboard() {
       let enriched: Row[] = board.map((b) => ({ ...b, periodDelta: 0, periodWins: 0, periodLosses: 0, rankChange: null }))
 
       if (period === 'all') {
-        const { data: fullHistory } = await supabase.from('ratings_history').select('*').returns<RatingHistoryEntry[]>()
-        if (fullHistory) {
+        if (allHistory.length > 0) {
           const previousOrder = [...board]
-            .map((b) => ({ id: b.id, prevRating: previousRatingSnapshot(fullHistory, b.id) }))
+            .map((b) => ({ id: b.id, prevRating: previousRatingSnapshot(allHistory, b.id) }))
             .sort((a, b) => b.prevRating - a.prevRating)
           const previousRank = new Map(previousOrder.map((p, i) => [p.id, i + 1]))
           const currentSorted = [...board].sort((a, b) => b.rating - a.rating)
@@ -152,19 +148,15 @@ export function Leaderboard() {
       if (period !== 'all') {
         const start = (period === 'month' ? startOfMonth(new Date()) : startOfQuarter(new Date())).toISOString()
 
-        const { data: history } = await supabase.from('ratings_history').select('*').gte('created_at', start)
-        const { data: periodMatches } = await supabase
-          .from('matches')
-          .select('*')
-          .eq('status', 'confirmed')
-          .gte('confirmed_at', start)
+        const history = allHistory.filter((h) => h.created_at >= start)
+        const periodMatches = allMatches.filter((m) => (m.confirmed_at ?? '') >= start)
 
         const deltaByPlayer: Record<string, number> = {}
-        history?.forEach((h) => { deltaByPlayer[h.player_id] = (deltaByPlayer[h.player_id] ?? 0) + h.delta })
+        history.forEach((h) => { deltaByPlayer[h.player_id] = (deltaByPlayer[h.player_id] ?? 0) + h.delta })
 
         const winsByPlayer: Record<string, number> = {}
         const lossesByPlayer: Record<string, number> = {}
-        periodMatches?.forEach((m) => {
+        periodMatches.forEach((m) => {
           if (!m.winner_id) return
           winsByPlayer[m.winner_id] = (winsByPlayer[m.winner_id] ?? 0) + 1
           const loser = m.winner_id === m.player1_id ? m.player2_id : m.player1_id
@@ -189,7 +181,7 @@ export function Leaderboard() {
     }
     load()
     return () => { cancelled = true }
-  }, [period])
+  }, [period, allMatches, allHistory])
 
   const forPlayer = (playerId: string) => allMatches.filter((m) => m.player1_id === playerId || m.player2_id === playerId)
 

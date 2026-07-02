@@ -35,12 +35,13 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
       const { data: match } = await supabase.from('matches').select('*').eq('id', matchId).single()
       if (!match || cancelled) return
 
-      const [{ data: player1 }, { data: player2 }, { data: sets }, { data: deltas }] = await Promise.all([
-        supabase.from('players').select('*').eq('id', match.player1_id).single(),
-        supabase.from('players').select('*').eq('id', match.player2_id).single(),
+      const [{ data: matchPlayers }, { data: sets }, { data: deltas }] = await Promise.all([
+        supabase.from('players').select('*').in('id', [match.player1_id, match.player2_id]),
         supabase.from('match_sets').select('*').eq('match_id', matchId).order('set_number').returns<MatchSet[]>(),
         supabase.from('ratings_history').select('*').eq('match_id', matchId).returns<RatingHistoryEntry[]>(),
       ])
+      const player1 = matchPlayers?.find((p) => p.id === match.player1_id)
+      const player2 = matchPlayers?.find((p) => p.id === match.player2_id)
 
       if (!cancelled && player1 && player2) {
         setDetails({ match, player1, player2, sets: sets ?? [], deltas: deltas ?? [] })

@@ -8,10 +8,13 @@ interface Title {
   label: string
 }
 
-function tierFor(rating: number) {
-  if (rating >= 1150) return { name: 'LEGENDE', gradient: 'from-amber-400 via-yellow-300 to-amber-500', text: 'text-amber-950' }
-  if (rating >= 1050) return { name: 'GULL', gradient: 'from-yellow-400 via-amber-300 to-yellow-500', text: 'text-yellow-950' }
-  if (rating >= 950) return { name: 'SØLV', gradient: 'from-slate-300 via-slate-100 to-slate-400', text: 'text-slate-900' }
+// Tier is based on the player's rank percentile in the current pool rather than an
+// absolute rating cutoff, since ratings reset to ~1000 every season.
+function tierFor(rank: number | null, total: number) {
+  const percentile = rank && total > 0 ? rank / total : 1
+  if (percentile <= 0.15) return { name: 'LEGENDE', gradient: 'from-amber-400 via-yellow-300 to-amber-500', text: 'text-amber-950' }
+  if (percentile <= 0.4) return { name: 'GULL', gradient: 'from-yellow-400 via-amber-300 to-yellow-500', text: 'text-yellow-950' }
+  if (percentile <= 0.75) return { name: 'SØLV', gradient: 'from-slate-300 via-slate-100 to-slate-400', text: 'text-slate-900' }
   return { name: 'BRONSE', gradient: 'from-orange-400 via-orange-300 to-orange-600', text: 'text-orange-950' }
 }
 
@@ -23,6 +26,8 @@ export function PlayerTradingCard({
   peakRating,
   achievementsEarned,
   achievementsTotal,
+  rank,
+  totalPlayers,
 }: {
   player: Player
   title: Title | null
@@ -31,9 +36,11 @@ export function PlayerTradingCard({
   peakRating: number | null
   achievementsEarned: number
   achievementsTotal: number
+  rank: number | null
+  totalPlayers: number
 }) {
   const { ref, share } = useShareImage(`${player.name.replace(/\s+/g, '-').toLowerCase()}-spillerkort.png`)
-  const tier = tierFor(player.rating)
+  const tier = tierFor(rank, totalPlayers)
 
   return (
     <div className="flex flex-col items-center gap-3">

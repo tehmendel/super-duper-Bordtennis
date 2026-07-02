@@ -56,31 +56,15 @@ export function NewMatch() {
     if (parsedSets.some((s) => s.player1_score === s.player2_score)) return setError('Et sett kan ikke ende uavgjort')
 
     setSaving(true)
-    const { data: match, error: matchError } = await supabase
-      .from('matches')
-      .insert({
-        player1_id: player.id,
-        player2_id: opponentId,
-        best_of: bestOf,
-        submitted_by: player.id,
-        status: 'pending',
-      })
-      .select()
-      .single()
-
-    if (matchError || !match) {
-      setSaving(false)
-      setError(matchError?.message ?? 'Kunne ikke opprette kamp')
-      return
-    }
-
-    const { error: setsError } = await supabase
-      .from('match_sets')
-      .insert(parsedSets.map((s) => ({ ...s, match_id: match.id })))
+    const { error: submitError } = await supabase.rpc('submit_match', {
+      p_player2_id: opponentId,
+      p_best_of: bestOf,
+      p_sets: parsedSets,
+    })
 
     setSaving(false)
-    if (setsError) {
-      setError(setsError.message)
+    if (submitError) {
+      setError(submitError.message)
       return
     }
 

@@ -37,8 +37,10 @@ export function useCardLayout(pageKey: string, defs: CardDef[]) {
   }
 
   async function setTitle(id: string, title: string) {
+    const previous = titles[id]
     setTitles((prev) => ({ ...prev, [id]: title }))
-    await supabase.rpc('set_card_title', { p_page_key: pageKey, p_card_id: id, p_title: title })
+    const { error } = await supabase.rpc('set_card_title', { p_page_key: pageKey, p_card_id: id, p_title: title })
+    if (error) setTitles((prev) => ({ ...prev, [id]: previous ?? defs.find((d) => d.id === id)?.title ?? '' }))
   }
 
   async function move(id: string, direction: -1 | 1) {
@@ -49,10 +51,11 @@ export function useCardLayout(pageKey: string, defs: CardDef[]) {
     const idPos = positions[id] ?? idx
     const otherPos = positions[otherId] ?? swapIdx
     setPositions((prev) => ({ ...prev, [id]: otherPos, [otherId]: idPos }))
-    await Promise.all([
+    const [{ error: e1 }, { error: e2 }] = await Promise.all([
       supabase.rpc('set_card_position', { p_page_key: pageKey, p_card_id: id, p_position: otherPos }),
       supabase.rpc('set_card_position', { p_page_key: pageKey, p_card_id: otherId, p_position: idPos }),
     ])
+    if (e1 || e2) setPositions((prev) => ({ ...prev, [id]: idPos, [otherId]: otherPos }))
   }
 
   return {

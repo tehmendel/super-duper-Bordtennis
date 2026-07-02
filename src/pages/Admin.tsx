@@ -10,13 +10,12 @@ import { AdminRoles } from '@/components/AdminRoles'
 import { AdminAuditLog } from '@/components/AdminAuditLog'
 import { AdminLadder } from '@/components/AdminLadder'
 import type { AchievementDefinition, Match, Player, PlayerAchievement } from '@/lib/types'
+import { WEEKDAY_NAMES as DAY_NAMES } from '@/lib/constants'
 
 interface EnrichedMatch extends Match {
   player1: Player
   player2: Player
 }
-
-const DAY_NAMES = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør']
 
 function StatusPill({ status }: { status: Match['status'] }) {
   const styles = {
