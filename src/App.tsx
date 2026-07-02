@@ -22,6 +22,7 @@ import { NewTournament } from '@/pages/NewTournament'
 import { TournamentDetail } from '@/pages/TournamentDetail'
 import { Stats } from '@/pages/Stats'
 import { WhatIf } from '@/pages/WhatIf'
+import { HallOfFame } from '@/pages/HallOfFame'
 
 function FullScreenSpinner() {
   return (
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/tournaments/:id" element={<TournamentDetail />} />
         <Route path="/stats" element={<Stats />} />
         <Route path="/what-if" element={<WhatIf />} />
+        <Route path="/hall-of-fame" element={<HallOfFame />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

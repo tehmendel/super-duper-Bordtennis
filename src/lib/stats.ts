@@ -136,6 +136,49 @@ export function winRateByWeekday(playerId: string, matches: Match[]) {
   return days
 }
 
+export function longestWinStreakEver(playerId: string, matches: Match[]) {
+  const sorted = [...matches].sort(
+    (a, b) => new Date(a.confirmed_at ?? a.created_at).getTime() - new Date(b.confirmed_at ?? b.created_at).getTime(),
+  )
+  let maxStreak = 0
+  let current = 0
+  for (const m of sorted) {
+    if (m.winner_id === playerId) {
+      current++
+      maxStreak = Math.max(maxStreak, current)
+    } else {
+      current = 0
+    }
+  }
+  return maxStreak
+}
+
+export function mostMatchesInOneDay(matches: Match[]) {
+  const counts = new Map<string, number>()
+  for (const m of matches) {
+    const day = new Date(m.confirmed_at ?? m.created_at).toISOString().slice(0, 10)
+    counts.set(day, (counts.get(day) ?? 0) + 1)
+  }
+  let max = 0
+  let maxDay: string | null = null
+  for (const [day, c] of counts.entries()) {
+    if (c > max) {
+      max = c
+      maxDay = day
+    }
+  }
+  return { count: max, day: maxDay }
+}
+
+export function previousRatingSnapshot(history: RatingHistoryEntry[], playerId: string) {
+  const entries = history
+    .filter((h) => h.player_id === playerId)
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+  if (entries.length >= 2) return entries[entries.length - 2].rating_after
+  if (entries.length === 1) return entries[0].rating_before
+  return 1000
+}
+
 export function longestGapDays(matches: Match[]) {
   if (matches.length < 2) return null
   const dates = matches

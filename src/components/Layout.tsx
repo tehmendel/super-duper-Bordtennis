@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Sparkles } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Sparkles, Crown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -17,6 +17,7 @@ const SECONDARY_NAV_ITEMS = [
   { to: '/head-to-head', label: 'Head-to-head', icon: Swords, end: false },
   { to: '/stats', label: 'Statistikk', icon: BarChart3, end: false },
   { to: '/what-if', label: 'Hva om?', icon: Sparkles, end: false },
+  { to: '/hall-of-fame', label: 'Hall of Fame', icon: Crown, end: false },
   { to: '/seasons', label: 'Sesonger', icon: Calendar, end: false },
   { to: '/tournaments', label: 'Turneringer', icon: Medal, end: false },
   { to: '/qr', label: 'QR', icon: QrCode, end: false },
