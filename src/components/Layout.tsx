@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck, Calendar } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck, Calendar, Medal } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -16,6 +16,7 @@ const SECONDARY_NAV_ITEMS = [
   { to: '/profile/edit', label: 'Min profil', icon: UserCog, end: false },
   { to: '/head-to-head', label: 'Head-to-head', icon: Swords, end: false },
   { to: '/seasons', label: 'Sesonger', icon: Calendar, end: false },
+  { to: '/tournaments', label: 'Turneringer', icon: Medal, end: false },
   { to: '/qr', label: 'QR', icon: QrCode, end: false },
   { to: '/invite', label: 'Inviter spiller', icon: UserPlus, end: false },
 ]

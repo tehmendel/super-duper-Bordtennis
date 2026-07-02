@@ -17,6 +17,9 @@ import { MorePage } from '@/pages/MorePage'
 import { EditProfile } from '@/pages/EditProfile'
 import { Admin } from '@/pages/Admin'
 import { Seasons } from '@/pages/Seasons'
+import { Tournaments } from '@/pages/Tournaments'
+import { NewTournament } from '@/pages/NewTournament'
+import { TournamentDetail } from '@/pages/TournamentDetail'
 
 function FullScreenSpinner() {
   return (
@@ -50,6 +53,9 @@ export default function App() {
         <Route path="/profile/edit" element={<EditProfile />} />
         <Route path="/admin" element={<Admin />} />
         <Route path="/seasons" element={<Seasons />} />
+        <Route path="/tournaments" element={<Tournaments />} />
+        <Route path="/tournaments/new" element={<NewTournament />} />
+        <Route path="/tournaments/:id" element={<TournamentDetail />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

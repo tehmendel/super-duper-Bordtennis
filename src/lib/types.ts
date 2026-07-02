@@ -79,6 +79,34 @@ export interface SeasonStanding {
   losses: number
 }
 
+export interface Tournament {
+  id: string
+  name: string
+  status: 'in_progress' | 'completed'
+  created_by: string | null
+  created_at: string
+}
+
+export interface TournamentParticipant {
+  id: string
+  tournament_id: string
+  player_id: string
+  seed: number
+}
+
+export interface TournamentMatch {
+  id: string
+  tournament_id: string
+  round: number
+  position: number
+  player1_id: string | null
+  player2_id: string | null
+  player1_score: number | null
+  player2_score: number | null
+  winner_id: string | null
+  next_match_id: string | null
+}
+
 export interface LeaderboardRow {
   id: string
   name: string
