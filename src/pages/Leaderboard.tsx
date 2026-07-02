@@ -18,7 +18,14 @@ interface Row extends LeaderboardRow {
 export function Leaderboard() {
   const [period, setPeriod] = useState<Period>('all')
   const [rows, setRows] = useState<Row[]>([])
+  const [seasonName, setSeasonName] = useState('')
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase.from('seasons').select('name').eq('is_active', true).maybeSingle().then(({ data }) => {
+      if (data) setSeasonName(data.name)
+    })
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -77,7 +84,10 @@ export function Leaderboard() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h1 className="text-2xl font-bold">Topplist</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Topplist</h1>
+          {seasonName && <p className="text-sm text-slate-500 dark:text-slate-400">{seasonName}</p>}
+        </div>
         <div className="flex gap-1">
           {(['all', 'month', 'quarter'] as Period[]).map((p) => (
             <button

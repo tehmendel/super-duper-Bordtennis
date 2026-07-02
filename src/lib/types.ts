@@ -60,6 +60,24 @@ export interface PlayerAchievement {
   earned_at: string
 }
 
+export interface Season {
+  id: string
+  name: string
+  started_at: string
+  ended_at: string | null
+  is_active: boolean
+}
+
+export interface SeasonStanding {
+  id: string
+  season_id: string
+  player_id: string
+  final_rating: number
+  matches_played: number
+  wins: number
+  losses: number
+}
+
 export interface LeaderboardRow {
   id: string
   name: string
