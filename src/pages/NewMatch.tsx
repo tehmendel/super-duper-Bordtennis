@@ -16,7 +16,6 @@ export function NewMatch() {
   const [opponentId, setOpponentId] = useState('')
   const [bestOf, setBestOf] = useState<1 | 3 | 5>(3)
   const [sets, setSets] = useState<SetScore[]>([{ player1_score: '', player2_score: '' }, { player1_score: '', player2_score: '' }])
-  const [location, setLocation] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -65,7 +64,6 @@ export function NewMatch() {
         best_of: bestOf,
         submitted_by: player.id,
         status: 'pending',
-        location: location.trim() || null,
       })
       .select()
       .single()
@@ -162,11 +160,6 @@ export function NewMatch() {
               </button>
             )}
           </div>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium mb-1 block">Sted (valgfritt)</label>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="F.eks. 3. etasje" className="input" />
         </div>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}

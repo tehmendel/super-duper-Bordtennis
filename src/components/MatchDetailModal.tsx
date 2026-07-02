@@ -117,9 +117,8 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
               </tbody>
             </table>
 
-            <div className="text-xs text-slate-400 flex flex-col gap-0.5">
-              <span>{new Date(details.match.confirmed_at ?? details.match.created_at).toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
-              {details.match.location && <span>📍 {details.match.location}</span>}
+            <div className="text-xs text-slate-400">
+              {new Date(details.match.confirmed_at ?? details.match.created_at).toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })}
             </div>
           </div>
         )}

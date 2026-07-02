@@ -28,7 +28,6 @@ export interface Match {
   status: MatchStatus
   submitted_by: string
   confirmed_by: string | null
-  location: string | null
   notes: string | null
   played_at: string
   created_at: string
