@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom'
-import { Swords, QrCode, UserPlus, ChevronRight, ShieldCheck, Calendar, Medal, BarChart3, Crown } from 'lucide-react'
+import { Swords, QrCode, UserPlus, ChevronRight, ShieldCheck, Calendar, Medal } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import type { PageKey } from '@/lib/types'
 
 const ITEMS: { to: string; label: string; description: string; icon: typeof Swords; pageKey: PageKey }[] = [
   { to: '/head-to-head', label: 'Head-to-head', description: 'Sammenlign to spillere og se Elo-odds', icon: Swords, pageKey: 'head_to_head' },
-  { to: '/stats', label: 'Statistikk', description: 'Dominansmatrise, rivaliseringer og upsets', icon: BarChart3, pageKey: 'stats' },
-  { to: '/hall-of-fame', label: 'Hall of Fame', description: 'Rekorder gjennom tidene', icon: Crown, pageKey: 'hall_of_fame' },
   { to: '/seasons', label: 'Sesonger', description: 'Se tidligere sesonger og plasseringer', icon: Calendar, pageKey: 'seasons' },
   { to: '/tournaments', label: 'Turneringer', description: 'Se og delta i interne turneringer', icon: Medal, pageKey: 'tournaments' },
   { to: '/qr', label: 'QR-kode', description: 'Heng opp ved bordet', icon: QrCode, pageKey: 'qr' },

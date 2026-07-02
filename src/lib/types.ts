@@ -85,7 +85,7 @@ export interface RoleAssignment {
 
 export const PAGE_KEYS = [
   'dashboard', 'new_match', 'pending', 'history', 'leaderboard', 'head_to_head',
-  'stats', 'seasons', 'tournaments', 'hall_of_fame', 'qr', 'invite', 'profile_edit',
+  'seasons', 'tournaments', 'qr', 'invite', 'profile_edit',
 ] as const
 
 export type PageKey = (typeof PAGE_KEYS)[number]
@@ -97,13 +97,25 @@ export const PAGE_LABELS: Record<PageKey, string> = {
   history: 'Historikk',
   leaderboard: 'Toppliste',
   head_to_head: 'Head-to-head',
-  stats: 'Statistikk',
   seasons: 'Sesonger',
   tournaments: 'Turneringer',
-  hall_of_fame: 'Hall of Fame',
   qr: 'QR',
   invite: 'Inviter spiller',
   profile_edit: 'Min profil',
+}
+
+export interface AuditLogEntry {
+  id: string
+  table_name: string
+  record_id: string | null
+  operation: 'INSERT' | 'UPDATE' | 'DELETE'
+  changed_by: string | null
+  changed_by_name: string | null
+  changed_by_email: string | null
+  old_data: Record<string, unknown> | null
+  new_data: Record<string, unknown> | null
+  changed_fields: string[] | null
+  created_at: string
 }
 
 export interface Season {

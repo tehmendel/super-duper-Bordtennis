@@ -7,6 +7,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { AdminMatchEditModal } from '@/components/AdminMatchEditModal'
 import { AdminSeasons } from '@/components/AdminSeasons'
 import { AdminRoles } from '@/components/AdminRoles'
+import { AdminAuditLog } from '@/components/AdminAuditLog'
 import type { AchievementDefinition, Match, Player, PlayerAchievement } from '@/lib/types'
 
 interface EnrichedMatch extends Match {
@@ -28,7 +29,7 @@ function StatusPill({ status }: { status: Match['status'] }) {
 
 export function Admin() {
   const { player } = useAuth()
-  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles'>('matches')
+  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
@@ -138,10 +139,14 @@ export function Admin() {
         <button onClick={() => setTab('roles')} className={tab === 'roles' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
           Roller
         </button>
+        <button onClick={() => setTab('auditlog')} className={tab === 'auditlog' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
+          Aktivitetslogg
+        </button>
       </div>
 
       {tab === 'seasons' && <AdminSeasons />}
       {tab === 'roles' && <AdminRoles />}
+      {tab === 'auditlog' && <AdminAuditLog />}
 
       {(tab === 'matches' || tab === 'activity' || tab === 'achievements') && (loading ? (
         <p className="text-slate-500">Laster...</p>

@@ -21,8 +21,6 @@ import { Seasons } from '@/pages/Seasons'
 import { Tournaments } from '@/pages/Tournaments'
 import { NewTournament } from '@/pages/NewTournament'
 import { TournamentDetail } from '@/pages/TournamentDetail'
-import { Stats } from '@/pages/Stats'
-import { HallOfFame } from '@/pages/HallOfFame'
 
 function FullScreenSpinner() {
   return (
@@ -59,8 +57,6 @@ export default function App() {
         <Route path="/tournaments" element={<RequireAccess page="tournaments"><Tournaments /></RequireAccess>} />
         <Route path="/tournaments/new" element={<RequireAccess page="tournaments"><NewTournament /></RequireAccess>} />
         <Route path="/tournaments/:id" element={<RequireAccess page="tournaments"><TournamentDetail /></RequireAccess>} />
-        <Route path="/stats" element={<RequireAccess page="stats"><Stats /></RequireAccess>} />
-        <Route path="/hall-of-fame" element={<RequireAccess page="hall_of_fame"><HallOfFame /></RequireAccess>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

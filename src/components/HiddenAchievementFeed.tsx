@@ -47,6 +47,7 @@ export function HiddenAchievementFeed() {
       .eq('achievement.hidden', true)
       .gte('earned_at', sevenDaysAgo)
       .order('earned_at', { ascending: false })
+      .limit(3)
       .returns<FeedEntry[]>()
       .then(({ data }) => setEntries(data ?? []))
   }, [])
