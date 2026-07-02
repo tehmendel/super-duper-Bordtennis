@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
 import { HiddenAchievementFeed } from '@/components/HiddenAchievementFeed'
+import { PlayerOfTheWeek } from '@/components/PlayerOfTheWeek'
 import type { LeaderboardRow, Match, Player, Season } from '@/lib/types'
 
 interface MatchOfWeek {
@@ -158,6 +159,8 @@ export function Dashboard() {
           <FormPills results={form} />
         </div>
       </div>
+
+      <PlayerOfTheWeek />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Link to="/matches/new" className="btn-primary py-4 text-base">

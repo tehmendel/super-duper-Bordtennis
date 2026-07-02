@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { Layout } from '@/components/Layout'
+import { RequireAccess } from '@/components/RequireAccess'
 import { Login } from '@/pages/Login'
 import { Onboarding } from '@/pages/Onboarding'
 import { Dashboard } from '@/pages/Dashboard'
@@ -21,7 +22,6 @@ import { Tournaments } from '@/pages/Tournaments'
 import { NewTournament } from '@/pages/NewTournament'
 import { TournamentDetail } from '@/pages/TournamentDetail'
 import { Stats } from '@/pages/Stats'
-import { WhatIf } from '@/pages/WhatIf'
 import { HallOfFame } from '@/pages/HallOfFame'
 
 function FullScreenSpinner() {
@@ -43,25 +43,24 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/matches/new" element={<NewMatch />} />
-        <Route path="/matches/pending" element={<PendingConfirmations />} />
-        <Route path="/matches" element={<MatchHistory />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/" element={<RequireAccess page="dashboard"><Dashboard /></RequireAccess>} />
+        <Route path="/matches/new" element={<RequireAccess page="new_match"><NewMatch /></RequireAccess>} />
+        <Route path="/matches/pending" element={<RequireAccess page="pending"><PendingConfirmations /></RequireAccess>} />
+        <Route path="/matches" element={<RequireAccess page="history"><MatchHistory /></RequireAccess>} />
+        <Route path="/leaderboard" element={<RequireAccess page="leaderboard"><Leaderboard /></RequireAccess>} />
         <Route path="/players/:id" element={<PlayerProfile />} />
-        <Route path="/head-to-head" element={<HeadToHead />} />
-        <Route path="/qr" element={<QrCodePage />} />
-        <Route path="/invite" element={<InvitePlayer />} />
+        <Route path="/head-to-head" element={<RequireAccess page="head_to_head"><HeadToHead /></RequireAccess>} />
+        <Route path="/qr" element={<RequireAccess page="qr"><QrCodePage /></RequireAccess>} />
+        <Route path="/invite" element={<RequireAccess page="invite"><InvitePlayer /></RequireAccess>} />
         <Route path="/more" element={<MorePage />} />
-        <Route path="/profile/edit" element={<EditProfile />} />
+        <Route path="/profile/edit" element={<RequireAccess page="profile_edit"><EditProfile /></RequireAccess>} />
         <Route path="/admin" element={<Admin />} />
-        <Route path="/seasons" element={<Seasons />} />
-        <Route path="/tournaments" element={<Tournaments />} />
-        <Route path="/tournaments/new" element={<NewTournament />} />
-        <Route path="/tournaments/:id" element={<TournamentDetail />} />
-        <Route path="/stats" element={<Stats />} />
-        <Route path="/what-if" element={<WhatIf />} />
-        <Route path="/hall-of-fame" element={<HallOfFame />} />
+        <Route path="/seasons" element={<RequireAccess page="seasons"><Seasons /></RequireAccess>} />
+        <Route path="/tournaments" element={<RequireAccess page="tournaments"><Tournaments /></RequireAccess>} />
+        <Route path="/tournaments/new" element={<RequireAccess page="tournaments"><NewTournament /></RequireAccess>} />
+        <Route path="/tournaments/:id" element={<RequireAccess page="tournaments"><TournamentDetail /></RequireAccess>} />
+        <Route path="/stats" element={<RequireAccess page="stats"><Stats /></RequireAccess>} />
+        <Route path="/hall-of-fame" element={<RequireAccess page="hall_of_fame"><HallOfFame /></RequireAccess>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

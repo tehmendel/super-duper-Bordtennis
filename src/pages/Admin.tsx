@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { AdminMatchEditModal } from '@/components/AdminMatchEditModal'
+import { AdminSeasons } from '@/components/AdminSeasons'
+import { AdminRoles } from '@/components/AdminRoles'
 import type { AchievementDefinition, Match, Player, PlayerAchievement } from '@/lib/types'
 
 interface EnrichedMatch extends Match {
@@ -26,7 +28,7 @@ function StatusPill({ status }: { status: Match['status'] }) {
 
 export function Admin() {
   const { player } = useAuth()
-  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements'>('matches')
+  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<Match | null>(null)
@@ -130,9 +132,18 @@ export function Admin() {
         <button onClick={() => setTab('achievements')} className={tab === 'achievements' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
           Skjulte achievements
         </button>
+        <button onClick={() => setTab('seasons')} className={tab === 'seasons' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
+          Sesonger
+        </button>
+        <button onClick={() => setTab('roles')} className={tab === 'roles' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
+          Roller
+        </button>
       </div>
 
-      {loading ? (
+      {tab === 'seasons' && <AdminSeasons />}
+      {tab === 'roles' && <AdminRoles />}
+
+      {(tab === 'matches' || tab === 'activity' || tab === 'achievements') && (loading ? (
         <p className="text-slate-500">Laster...</p>
       ) : tab === 'matches' ? (
         <div className="flex flex-col gap-2">
@@ -269,7 +280,7 @@ export function Admin() {
             </tbody>
           </table>
         </div>
-      )}
+      ))}
 
       <AdminMatchEditModal
         match={editingMatch}

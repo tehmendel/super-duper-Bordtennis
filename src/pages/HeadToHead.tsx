@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Zap } from 'lucide-react'
+import { Zap, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { suggestedHandicap } from '@/lib/handicap'
+import { eloWinProbability } from '@/lib/stats'
 import type { Match, Player } from '@/lib/types'
 
 export function HeadToHead() {
@@ -90,6 +91,26 @@ export function HeadToHead() {
                 : `${aWins > bWins ? a.name : b.name} dominerer oppgjøret ${Math.max(aWins, bWins)}–${Math.min(aWins, bWins)} 🔥`}
             </p>
           )}
+
+          <div className="card p-5 flex flex-col items-center gap-3">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <Sparkles size={16} className="text-violet-500" /> Hva om de møttes i dag?
+            </p>
+            <div className="flex items-center justify-around w-full">
+              <div className="flex flex-col items-center gap-1">
+                <span className="font-medium text-sm">{a.name}</span>
+                <span className="text-2xl font-bold text-brand-600">{Math.round(eloWinProbability(a.rating, b.rating) * 100)}%</span>
+              </div>
+              <span className="text-slate-400 font-bold">vs</span>
+              <div className="flex flex-col items-center gap-1">
+                <span className="font-medium text-sm">{b.name}</span>
+                <span className="text-2xl font-bold text-brand-600">{Math.round((1 - eloWinProbability(a.rating, b.rating)) * 100)}%</span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+              Basert på Elo-rating ({Math.round(a.rating)} mot {Math.round(b.rating)})
+            </p>
+          </div>
 
           {a.rating !== b.rating && (
             <div className="card p-4 flex items-center gap-3">

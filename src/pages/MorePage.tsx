@@ -1,24 +1,25 @@
 import { Link } from 'react-router-dom'
-import { Swords, QrCode, UserPlus, ChevronRight, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Sparkles, Crown } from 'lucide-react'
+import { Swords, QrCode, UserPlus, ChevronRight, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Crown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import type { PageKey } from '@/lib/types'
 
-const ITEMS = [
-  { to: '/profile/edit', label: 'Min profil', description: 'Endre navn og profilbilde', icon: UserCog },
-  { to: '/head-to-head', label: 'Head-to-head', description: 'Sammenlign to spillere', icon: Swords },
-  { to: '/stats', label: 'Statistikk', description: 'Dominansmatrise, rivaliseringer og upsets', icon: BarChart3 },
-  { to: '/what-if', label: 'Hva om?', description: 'Simuler en hypotetisk kamp mellom to spillere', icon: Sparkles },
-  { to: '/hall-of-fame', label: 'Hall of Fame', description: 'Rekorder gjennom tidene', icon: Crown },
-  { to: '/seasons', label: 'Sesonger', description: 'Se tidligere sesonger og plasseringer', icon: Calendar },
-  { to: '/tournaments', label: 'Turneringer', description: 'Se og delta i interne turneringer', icon: Medal },
-  { to: '/qr', label: 'QR-kode', description: 'Heng opp ved bordet', icon: QrCode },
-  { to: '/invite', label: 'Inviter spiller', description: 'Send påloggingslenke til en kollega', icon: UserPlus },
+const ITEMS: { to: string; label: string; description: string; icon: typeof Swords; pageKey: PageKey }[] = [
+  { to: '/profile/edit', label: 'Min profil', description: 'Endre navn og profilbilde', icon: UserCog, pageKey: 'profile_edit' },
+  { to: '/head-to-head', label: 'Head-to-head', description: 'Sammenlign to spillere og se Elo-odds', icon: Swords, pageKey: 'head_to_head' },
+  { to: '/stats', label: 'Statistikk', description: 'Dominansmatrise, rivaliseringer og upsets', icon: BarChart3, pageKey: 'stats' },
+  { to: '/hall-of-fame', label: 'Hall of Fame', description: 'Rekorder gjennom tidene', icon: Crown, pageKey: 'hall_of_fame' },
+  { to: '/seasons', label: 'Sesonger', description: 'Se tidligere sesonger og plasseringer', icon: Calendar, pageKey: 'seasons' },
+  { to: '/tournaments', label: 'Turneringer', description: 'Se og delta i interne turneringer', icon: Medal, pageKey: 'tournaments' },
+  { to: '/qr', label: 'QR-kode', description: 'Heng opp ved bordet', icon: QrCode, pageKey: 'qr' },
+  { to: '/invite', label: 'Inviter spiller', description: 'Send påloggingslenke til en kollega', icon: UserPlus, pageKey: 'invite' },
 ]
 
 export function MorePage() {
-  const { player } = useAuth()
+  const { player, hasAccess } = useAuth()
+  const visible = ITEMS.filter((item) => hasAccess(item.pageKey))
   const items = player?.is_admin
-    ? [...ITEMS, { to: '/admin', label: 'Admin', description: 'Rediger kamper og se aktivitetsstatistikk', icon: ShieldCheck }]
-    : ITEMS
+    ? [...visible, { to: '/admin', label: 'Admin', description: 'Rediger kamper, sesonger, roller og statistikk', icon: ShieldCheck }]
+    : visible
 
   return (
     <div className="flex flex-col gap-4">

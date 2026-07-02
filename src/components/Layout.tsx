@@ -1,43 +1,44 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Sparkles, Crown } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Crown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import type { PageKey } from '@/lib/types'
 
-const PRIMARY_NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: Home, end: true },
-  { to: '/matches/new', label: 'Ny kamp', icon: PlusCircle, end: false },
-  { to: '/matches/pending', label: 'Bekreftelser', icon: CheckCircle2, end: false },
-  { to: '/matches', label: 'Historikk', icon: History, end: true },
-  { to: '/leaderboard', label: 'Toppliste', icon: Trophy, end: false },
+const PRIMARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: boolean; pageKey: PageKey }[] = [
+  { to: '/', label: 'Dashboard', icon: Home, end: true, pageKey: 'dashboard' },
+  { to: '/matches/new', label: 'Ny kamp', icon: PlusCircle, end: false, pageKey: 'new_match' },
+  { to: '/matches/pending', label: 'Bekreftelser', icon: CheckCircle2, end: false, pageKey: 'pending' },
+  { to: '/matches', label: 'Historikk', icon: History, end: true, pageKey: 'history' },
+  { to: '/leaderboard', label: 'Toppliste', icon: Trophy, end: false, pageKey: 'leaderboard' },
 ]
 
-const SECONDARY_NAV_ITEMS = [
-  { to: '/profile/edit', label: 'Min profil', icon: UserCog, end: false },
-  { to: '/head-to-head', label: 'Head-to-head', icon: Swords, end: false },
-  { to: '/stats', label: 'Statistikk', icon: BarChart3, end: false },
-  { to: '/what-if', label: 'Hva om?', icon: Sparkles, end: false },
-  { to: '/hall-of-fame', label: 'Hall of Fame', icon: Crown, end: false },
-  { to: '/seasons', label: 'Sesonger', icon: Calendar, end: false },
-  { to: '/tournaments', label: 'Turneringer', icon: Medal, end: false },
-  { to: '/qr', label: 'QR', icon: QrCode, end: false },
-  { to: '/invite', label: 'Inviter spiller', icon: UserPlus, end: false },
+const SECONDARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: boolean; pageKey: PageKey }[] = [
+  { to: '/profile/edit', label: 'Min profil', icon: UserCog, end: false, pageKey: 'profile_edit' },
+  { to: '/head-to-head', label: 'Head-to-head', icon: Swords, end: false, pageKey: 'head_to_head' },
+  { to: '/stats', label: 'Statistikk', icon: BarChart3, end: false, pageKey: 'stats' },
+  { to: '/hall-of-fame', label: 'Hall of Fame', icon: Crown, end: false, pageKey: 'hall_of_fame' },
+  { to: '/seasons', label: 'Sesonger', icon: Calendar, end: false, pageKey: 'seasons' },
+  { to: '/tournaments', label: 'Turneringer', icon: Medal, end: false, pageKey: 'tournaments' },
+  { to: '/qr', label: 'QR', icon: QrCode, end: false, pageKey: 'qr' },
+  { to: '/invite', label: 'Inviter spiller', icon: UserPlus, end: false, pageKey: 'invite' },
 ]
 
-const MOBILE_NAV_ITEMS = [
-  ...PRIMARY_NAV_ITEMS,
-  { to: '/more', label: 'Mer', icon: MoreHorizontal, end: false },
-]
+const MOBILE_EXTRA_ITEM = { to: '/more', label: 'Mer', icon: MoreHorizontal, end: false }
 
 export function Layout() {
-  const { player, signOut } = useAuth()
+  const { player, signOut, hasAccess } = useAuth()
   const { theme, toggle } = useTheme()
+
+  const visiblePrimary = PRIMARY_NAV_ITEMS.filter((item) => hasAccess(item.pageKey))
+  const visibleSecondary = SECONDARY_NAV_ITEMS.filter((item) => hasAccess(item.pageKey))
+  const mobileItems = [...visiblePrimary, MOBILE_EXTRA_ITEM]
 
   return (
     <div className="min-h-dvh flex flex-col md:flex-row">
       <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:dark:border-slate-800 md:p-4 md:gap-2">
         <div className="px-2 py-3 text-lg font-bold">🏓 Super Duper Bordtennis</div>
-        {PRIMARY_NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+        {visiblePrimary.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -53,7 +54,7 @@ export function Layout() {
           </NavLink>
         ))}
         <hr className="my-2 border-slate-200 dark:border-slate-800" />
-        {SECONDARY_NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+        {visibleSecondary.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -117,8 +118,8 @@ export function Layout() {
         </div>
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-40 grid grid-cols-6 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur md:hidden">
-        {MOBILE_NAV_ITEMS.map(({ to, label, icon: Icon, end }) => (
+      <nav className="fixed bottom-0 inset-x-0 z-40 grid border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur md:hidden" style={{ gridTemplateColumns: `repeat(${mobileItems.length}, minmax(0, 1fr))` }}>
+        {mobileItems.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
             to={to}

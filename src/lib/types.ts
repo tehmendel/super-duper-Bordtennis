@@ -61,6 +61,51 @@ export interface PlayerAchievement {
   earned_at: string
 }
 
+export type AccessLevel = 'read' | 'write'
+
+export interface Role {
+  id: string
+  name: string
+  is_default: boolean
+  created_at: string
+}
+
+export interface RolePermission {
+  id: string
+  role_id: string
+  page_key: string
+  access_level: AccessLevel
+}
+
+export interface RoleAssignment {
+  id: string
+  role_id: string
+  player_id: string
+}
+
+export const PAGE_KEYS = [
+  'dashboard', 'new_match', 'pending', 'history', 'leaderboard', 'head_to_head',
+  'stats', 'seasons', 'tournaments', 'hall_of_fame', 'qr', 'invite', 'profile_edit',
+] as const
+
+export type PageKey = (typeof PAGE_KEYS)[number]
+
+export const PAGE_LABELS: Record<PageKey, string> = {
+  dashboard: 'Dashboard',
+  new_match: 'Ny kamp',
+  pending: 'Bekreftelser',
+  history: 'Historikk',
+  leaderboard: 'Toppliste',
+  head_to_head: 'Head-to-head',
+  stats: 'Statistikk',
+  seasons: 'Sesonger',
+  tournaments: 'Turneringer',
+  hall_of_fame: 'Hall of Fame',
+  qr: 'QR',
+  invite: 'Inviter spiller',
+  profile_edit: 'Min profil',
+}
+
 export interface Season {
   id: string
   name: string
