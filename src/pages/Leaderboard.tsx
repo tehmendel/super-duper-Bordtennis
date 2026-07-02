@@ -15,9 +15,9 @@ import {
   peakRating,
   previousRatingSnapshot,
 } from '@/lib/stats'
-import type { LeaderboardRow, Match, Player, RatingHistoryEntry } from '@/lib/types'
+import type { LeaderboardRow, Match, Player, RatingHistoryEntry, Season, SeasonStanding } from '@/lib/types'
 
-type Period = 'all' | 'month' | 'quarter'
+type Period = 'all' | 'month' | 'quarter' | 'season'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 
@@ -49,6 +49,9 @@ export function Leaderboard() {
   const [seasonName, setSeasonName] = useState('')
   const [loading, setLoading] = useState(true)
 
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [selectedSeasonId, setSelectedSeasonId] = useState('')
+
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
   const [allMatches, setAllMatches] = useState<Match[]>([])
   const [allHistory, setAllHistory] = useState<RatingHistoryEntry[]>([])
@@ -56,6 +59,11 @@ export function Leaderboard() {
   useEffect(() => {
     supabase.from('seasons').select('name').eq('is_active', true).maybeSingle().then(({ data }) => {
       if (data) setSeasonName(data.name)
+    })
+    supabase.from('seasons').select('*').order('started_at', { ascending: false }).returns<Season[]>().then(({ data }) => {
+      setSeasons(data ?? [])
+      const active = data?.find((s) => s.is_active)
+      setSelectedSeasonId((current) => current || active?.id || data?.[0]?.id || '')
     })
     Promise.all([
       supabase.from('players').select('*').returns<Player[]>(),
@@ -69,6 +77,51 @@ export function Leaderboard() {
   }, [])
 
   useEffect(() => {
+    if (period !== 'season') return
+    let cancelled = false
+    async function loadSeason() {
+      if (!selectedSeasonId) return
+      setLoading(true)
+      const season = seasons.find((s) => s.id === selectedSeasonId)
+      if (season?.is_active) {
+        const { data: board } = await supabase.from('leaderboard').select('*').order('rating', { ascending: false }).returns<LeaderboardRow[]>()
+        if (!cancelled) {
+          setRows((board ?? []).map((b) => ({ ...b, periodDelta: 0, periodWins: 0, periodLosses: 0, rankChange: null })))
+          setLoading(false)
+        }
+      } else {
+        const { data } = await supabase
+          .from('season_standings')
+          .select('*, player:players(*)')
+          .eq('season_id', selectedSeasonId)
+          .order('final_rating', { ascending: false })
+          .returns<(SeasonStanding & { player: Player })[]>()
+        if (!cancelled) {
+          setRows(
+            (data ?? []).map((s) => ({
+              id: s.player_id,
+              name: s.player.name,
+              avatar_url: s.player.avatar_url,
+              rating: s.final_rating,
+              matches_played: s.matches_played,
+              wins: s.wins,
+              losses: s.losses,
+              periodDelta: 0,
+              periodWins: 0,
+              periodLosses: 0,
+              rankChange: null,
+            })),
+          )
+          setLoading(false)
+        }
+      }
+    }
+    loadSeason()
+    return () => { cancelled = true }
+  }, [period, selectedSeasonId, seasons])
+
+  useEffect(() => {
+    if (period === 'season') return
     let cancelled = false
     async function load() {
       setLoading(true)
@@ -192,16 +245,23 @@ export function Leaderboard() {
           <h1 className="text-2xl font-bold">Toppliste</h1>
           {seasonName && <p className="text-sm text-slate-500 dark:text-slate-400">{seasonName}</p>}
         </div>
-        <div className="flex gap-1">
-          {(['all', 'month', 'quarter'] as Period[]).map((p) => (
+        <div className="flex gap-1 flex-wrap items-center">
+          {(['all', 'month', 'quarter', 'season'] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
               className={period === p ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}
             >
-              {p === 'all' ? 'Alle tider' : p === 'month' ? 'Denne måneden' : 'Dette kvartalet'}
+              {p === 'all' ? 'Alle tider' : p === 'month' ? 'Denne måneden' : p === 'quarter' ? 'Dette kvartalet' : 'Sesong'}
             </button>
           ))}
+          {period === 'season' && (
+            <select value={selectedSeasonId} onChange={(e) => setSelectedSeasonId(e.target.value)} className="input w-auto text-sm py-1.5">
+              {seasons.map((s) => (
+                <option key={s.id} value={s.id}>{s.name} {s.is_active ? '(pågår)' : ''}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -230,7 +290,7 @@ export function Leaderboard() {
                     {r.matches_played} kamper · {winRate}% seiere
                   </p>
                 </div>
-                {period === 'all' ? (
+                {period === 'all' || period === 'season' ? (
                   <span className="font-bold text-lg">{Math.round(r.rating)}</span>
                 ) : (
                   <div className="text-right">

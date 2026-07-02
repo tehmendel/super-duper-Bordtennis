@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Trophy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import type { LeaderboardRow, Player, Season, SeasonStanding } from '@/lib/types'
 
@@ -18,15 +16,10 @@ interface StandingRow {
 }
 
 export function Seasons() {
-  const { player } = useAuth()
   const [seasons, setSeasons] = useState<Season[]>([])
   const [selectedId, setSelectedId] = useState('')
   const [rows, setRows] = useState<StandingRow[]>([])
   const [loading, setLoading] = useState(true)
-  const [newSeasonName, setNewSeasonName] = useState('')
-  const [targetEndDate, setTargetEndDate] = useState('')
-  const [starting, setStarting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const loadSeasons = useCallback(async () => {
     const { data } = await supabase.from('seasons').select('*').order('started_at', { ascending: false }).returns<Season[]>()
@@ -79,24 +72,6 @@ export function Seasons() {
     }
   }, [selectedId, seasons])
 
-  async function handleStartNewSeason() {
-    if (!newSeasonName.trim()) return
-    setStarting(true)
-    setError(null)
-    const { error } = await supabase.rpc('start_new_season', {
-      p_name: newSeasonName.trim(),
-      p_target_end_date: targetEndDate ? new Date(targetEndDate).toISOString() : null,
-    })
-    setStarting(false)
-    if (error) {
-      setError(error.message)
-      return
-    }
-    setNewSeasonName('')
-    setTargetEndDate('')
-    await loadSeasons()
-  }
-
   const selectedSeason = seasons.find((s) => s.id === selectedId)
 
   return (
@@ -136,33 +111,6 @@ export function Seasons() {
               </div>
             )
           })}
-        </div>
-      )}
-
-      {player?.is_admin && selectedSeason?.is_active && (
-        <div className="card p-5 flex flex-col gap-3">
-          <p className="text-sm font-semibold flex items-center gap-2">
-            <Trophy size={16} /> Start ny sesong
-          </p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Låser inneværende sesong sine plasseringer og nullstiller alle til 1000 i rating.
-          </p>
-          <div className="flex gap-2">
-            <input
-              value={newSeasonName}
-              onChange={(e) => setNewSeasonName(e.target.value)}
-              placeholder="F.eks. Sesong 2"
-              className="input"
-            />
-            <button onClick={handleStartNewSeason} disabled={starting} className="btn-primary shrink-0">
-              {starting ? 'Starter...' : 'Start'}
-            </button>
-          </div>
-          <div>
-            <label className="text-xs text-slate-500 dark:text-slate-400 mb-1 block">Planlagt sluttdato (valgfritt, viser nedtelling på dashboard)</label>
-            <input type="date" value={targetEndDate} onChange={(e) => setTargetEndDate(e.target.value)} className="input" />
-          </div>
-          {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>
       )}
     </div>
