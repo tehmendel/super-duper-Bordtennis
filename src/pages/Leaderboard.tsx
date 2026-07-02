@@ -63,7 +63,7 @@ export function Leaderboard() {
     supabase.from('seasons').select('*').order('started_at', { ascending: false }).returns<Season[]>().then(({ data }) => {
       setSeasons(data ?? [])
       const active = data?.find((s) => s.is_active)
-      setSelectedSeasonId((current) => current || active?.id || data?.[0]?.id || '')
+      setSelectedSeasonId(active?.id ?? data?.[0]?.id ?? '')
     })
     Promise.all([
       supabase.from('players').select('*').returns<Player[]>(),
