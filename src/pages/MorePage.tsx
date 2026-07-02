@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom'
-import { Swords, QrCode, UserPlus, ChevronRight, UserCog, ShieldCheck, Calendar, Medal, BarChart3 } from 'lucide-react'
+import { Swords, QrCode, UserPlus, ChevronRight, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Sparkles } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const ITEMS = [
   { to: '/profile/edit', label: 'Min profil', description: 'Endre navn og profilbilde', icon: UserCog },
   { to: '/head-to-head', label: 'Head-to-head', description: 'Sammenlign to spillere', icon: Swords },
   { to: '/stats', label: 'Statistikk', description: 'Dominansmatrise, rivaliseringer og upsets', icon: BarChart3 },
+  { to: '/what-if', label: 'Hva om?', description: 'Simuler en hypotetisk kamp mellom to spillere', icon: Sparkles },
   { to: '/seasons', label: 'Sesonger', description: 'Se tidligere sesonger og plasseringer', icon: Calendar },
   { to: '/tournaments', label: 'Turneringer', description: 'Se og delta i interne turneringer', icon: Medal },
   { to: '/qr', label: 'QR-kode', description: 'Heng opp ved bordet', icon: QrCode },

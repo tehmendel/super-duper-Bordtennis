@@ -4,6 +4,7 @@ import { Trophy, X, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { eloWinProbability } from '@/lib/stats'
 import type { Player, Tournament, TournamentMatch } from '@/lib/types'
 
 interface EnrichedMatch extends TournamentMatch {
@@ -120,11 +121,14 @@ export function TournamentDetail() {
               .filter((m) => m.round === round)
               .map((m) => {
                 const canEdit = player?.is_admin && m.player1_id && m.player2_id && m.player1_score === null
+                const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
+                const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null
                 return (
                   <div key={m.id} className="card p-3 flex flex-col gap-2">
                     {[m.player1, m.player2].map((p, i) => {
                       const score = i === 0 ? m.player1_score : m.player2_score
                       const isWinner = p && m.winner_id === p.id
+                      const oddsPct = odds !== null ? Math.round((i === 0 ? odds : 1 - odds) * 100) : null
                       return (
                         <div key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${isWinner ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
                           {p ? (
@@ -136,6 +140,7 @@ export function TournamentDetail() {
                             <span className="flex-1 text-sm text-slate-400 italic">Venter...</span>
                           )}
                           {score !== null && <span className="font-mono text-sm">{score}</span>}
+                          {oddsPct !== null && <span className="text-xs text-slate-400 font-mono">{oddsPct}%</span>}
                         </div>
                       )
                     })}

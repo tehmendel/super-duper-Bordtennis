@@ -1,5 +1,9 @@
 import type { Match, MatchSet, Player, RatingHistoryEntry } from '@/lib/types'
 
+export function eloWinProbability(ratingA: number, ratingB: number) {
+  return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400))
+}
+
 export interface MatchWithSets {
   match: Match
   sets: MatchSet[]
@@ -67,7 +71,7 @@ export function deuceRate(matchesWithSets: MatchWithSets[]) {
   return total > 0 ? deuce / total : null
 }
 
-export function comebackRate(playerId: string, matchesWithSets: MatchWithSets[]) {
+export function comebackRate(playerId: string, matchesWithSets: MatchWithSets[]): { rate: number | null; samples: number } {
   let lostFirstSet = 0
   let comebacks = 0
   for (const { match, sets } of matchesWithSets) {
@@ -79,10 +83,10 @@ export function comebackRate(playerId: string, matchesWithSets: MatchWithSets[])
     lostFirstSet++
     if (match.winner_id === playerId) comebacks++
   }
-  return lostFirstSet > 0 ? comebacks / lostFirstSet : null
+  return { rate: lostFirstSet > 0 ? comebacks / lostFirstSet : null, samples: lostFirstSet }
 }
 
-export function clutchRate(playerId: string, matchesWithSets: MatchWithSets[]) {
+export function clutchRate(playerId: string, matchesWithSets: MatchWithSets[]): { rate: number | null; samples: number } {
   let decidingSets = 0
   let wonDeciding = 0
   for (const { match, sets } of matchesWithSets) {
@@ -93,7 +97,7 @@ export function clutchRate(playerId: string, matchesWithSets: MatchWithSets[]) {
     const wonLastSet = isP1 ? lastSet.player1_score > lastSet.player2_score : lastSet.player2_score > lastSet.player1_score
     if (wonLastSet) wonDeciding++
   }
-  return decidingSets > 0 ? wonDeciding / decidingSets : null
+  return { rate: decidingSets > 0 ? wonDeciding / decidingSets : null, samples: decidingSets }
 }
 
 export interface Nemesis {
@@ -205,6 +209,40 @@ export function closestRivalries(matches: Match[], minMatches = 3): Rivalry[] {
   return [...pairs.values()]
     .filter((r) => r.total >= minMatches)
     .sort((x, y) => Math.abs(x.winsA - x.winsB) - Math.abs(y.winsA - y.winsB) || y.total - x.total)
+}
+
+export function signatureWin(playerId: string, matches: Match[], historyByMatch: Record<string, RatingHistoryEntry[]>) {
+  return biggestUpsetEver(
+    matches.filter((m) => m.winner_id === playerId),
+    historyByMatch,
+  )
+}
+
+export interface PlayerTitle {
+  label: string
+  emoji: string
+}
+
+export function deriveTitle(params: {
+  clutch: number | null
+  clutchSamples: number
+  comeback: number | null
+  comebackSamples: number
+  deuce: number | null
+  hasLegendarySlayer: boolean
+  hasGiantSlayer: boolean
+  volatility: number
+  matchesPlayed: number
+}): PlayerTitle | null {
+  const { clutch, clutchSamples, comeback, comebackSamples, deuce, hasLegendarySlayer, hasGiantSlayer, volatility, matchesPlayed } = params
+
+  if (clutch !== null && clutchSamples >= 3 && clutch >= 0.7) return { label: 'Mr. Clutch', emoji: '🧊' }
+  if (comeback !== null && comebackSamples >= 3 && comeback >= 0.5) return { label: 'Comeback King', emoji: '🔄' }
+  if (hasLegendarySlayer) return { label: 'Legende-jeger', emoji: '⚡' }
+  if (hasGiantSlayer) return { label: 'Giant Slayer', emoji: '🗡️' }
+  if (deuce !== null && deuce >= 0.3 && matchesPlayed >= 5) return { label: 'Deuce-mesteren', emoji: '♟️' }
+  if (matchesPlayed >= 5 && volatility > 0 && volatility < 15) return { label: 'Mr. Stabil', emoji: '🪨' }
+  return null
 }
 
 export interface BiggestUpset {

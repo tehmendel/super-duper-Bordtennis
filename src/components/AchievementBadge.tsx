@@ -4,10 +4,12 @@ export function AchievementBadge({
   achievement,
   earned,
   earnedAt,
+  rarity,
 }: {
   achievement: AchievementDefinition
   earned: boolean
   earnedAt?: string | null
+  rarity?: number
 }) {
   const isMystery = achievement.hidden && !earned
 
@@ -23,6 +25,9 @@ export function AchievementBadge({
       <span className="text-xs text-slate-500 dark:text-slate-400">
         {isMystery ? 'Skjult prestasjon — lås den opp for å se hva den er' : achievement.description}
       </span>
+      {rarity !== undefined && (
+        <span className="text-[10px] text-slate-400 mt-1">{Math.round(rarity * 100)}% av spillerne har denne</span>
+      )}
     </div>
   )
 }

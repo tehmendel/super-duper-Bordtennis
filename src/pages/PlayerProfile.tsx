@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Pencil, Skull } from 'lucide-react'
+import { Pencil, Skull, Trophy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -13,11 +13,13 @@ import {
   clutchRate,
   comebackRate,
   countUpsets,
+  deriveTitle,
   deuceRate,
   findNemesis,
   peakRating,
   ratingMomentum,
   ratingVolatility,
+  signatureWin,
   winRateByWeekday,
   type MatchWithSets,
 } from '@/lib/stats'
@@ -39,6 +41,7 @@ export function PlayerProfile() {
   const [players, setPlayers] = useState<Player[]>([])
   const [earned, setEarned] = useState<PlayerAchievement[]>([])
   const [definitions, setDefinitions] = useState<AchievementDefinition[]>([])
+  const [allAchievementsEarned, setAllAchievementsEarned] = useState<PlayerAchievement[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -46,7 +49,7 @@ export function PlayerProfile() {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const [{ data: p }, { data: board }, { data: hist }, { data: m }, { data: pa }, { data: defs }, { data: allP }] = await Promise.all([
+      const [{ data: p }, { data: board }, { data: hist }, { data: m }, { data: pa }, { data: defs }, { data: allP }, { data: allPa }] = await Promise.all([
         supabase.from('players').select('*').eq('id', id).single(),
         supabase.from('leaderboard').select('*').order('rating', { ascending: false }).returns<LeaderboardRow[]>(),
         supabase.from('ratings_history').select('*').eq('player_id', id).order('created_at').returns<RatingHistoryEntry[]>(),
@@ -60,6 +63,7 @@ export function PlayerProfile() {
         supabase.from('player_achievements').select('*').eq('player_id', id).returns<PlayerAchievement[]>(),
         supabase.from('achievement_definitions').select('*').returns<AchievementDefinition[]>(),
         supabase.from('players').select('*').returns<Player[]>(),
+        supabase.from('player_achievements').select('*').returns<PlayerAchievement[]>(),
       ])
 
       if (cancelled) return
@@ -74,6 +78,7 @@ export function PlayerProfile() {
       setEarned(pa ?? [])
       setDefinitions(defs ?? [])
       setPlayers(allP ?? [])
+      setAllAchievementsEarned(allPa ?? [])
 
       const matchIds = (m ?? []).map((match) => match.id)
       if (matchIds.length > 0) {
@@ -134,13 +139,43 @@ export function PlayerProfile() {
   const nemesis = findNemesis(id!, matches)
   const nemesisPlayer = nemesis ? players.find((p) => p.id === nemesis.playerId) : null
   const weekdayForm = winRateByWeekday(id!, matches)
+  const signature = signatureWin(id!, matches, historyByMatch)
+  const signatureOpponent = signature
+    ? players.find((p) => p.id === (signature.match.winner_id === signature.match.player1_id ? signature.match.player2_id : signature.match.player1_id))
+    : null
+
+  const title = deriveTitle({
+    clutch: clutch.rate,
+    clutchSamples: clutch.samples,
+    comeback: comeback.rate,
+    comebackSamples: comeback.samples,
+    deuce,
+    hasLegendarySlayer: earned.some((e) => e.achievement_id === 'legendary_slayer'),
+    hasGiantSlayer: earned.some((e) => e.achievement_id === 'giant_slayer'),
+    volatility,
+    matchesPlayed: matches.length,
+  })
+
+  const totalPlayerCount = players.length
+  const rarityByAchievement: Record<string, number> = {}
+  definitions.forEach((d) => {
+    const earners = new Set(allAchievementsEarned.filter((e) => e.achievement_id === d.id).map((e) => e.player_id))
+    rarityByAchievement[d.id] = totalPlayerCount > 0 ? earners.size / totalPlayerCount : 0
+  })
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4">
         <PlayerAvatar name={player.name} avatarUrl={player.avatar_url} size="lg" />
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">{player.name}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-bold">{player.name}</h1>
+            {title && (
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">
+                {title.emoji} {title.label}
+              </span>
+            )}
+          </div>
           <p className="text-slate-500 dark:text-slate-400">{rank ? `Plass #${rank} av ${total}` : 'Ingen rangering ennå'}</p>
         </div>
         {currentPlayer?.id === player.id && (
@@ -213,14 +248,30 @@ export function PlayerProfile() {
           </div>
           <div className="card p-4">
             <p className="text-xs text-slate-500">Comeback-rate</p>
-            <p className="text-xl font-bold">{comeback !== null ? `${Math.round(comeback * 100)}%` : '–'}</p>
+            <p className="text-xl font-bold">{comeback.rate !== null ? `${Math.round(comeback.rate * 100)}%` : '–'}</p>
           </div>
           <div className="card p-4">
             <p className="text-xs text-slate-500">Clutch-rate</p>
-            <p className="text-xl font-bold">{clutch !== null ? `${Math.round(clutch * 100)}%` : '–'}</p>
+            <p className="text-xl font-bold">{clutch.rate !== null ? `${Math.round(clutch.rate * 100)}%` : '–'}</p>
           </div>
         </div>
       </div>
+
+      {signature && signatureOpponent && (
+        <div className="card p-5 flex items-center gap-3">
+          <Trophy size={24} className="text-amber-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Signaturseier</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Beste seier: slo{' '}
+              <Link to={`/players/${signatureOpponent.id}`} className="font-semibold text-amber-600 hover:underline">
+                {signatureOpponent.name}
+              </Link>{' '}
+              som var ratet {Math.round(signature.margin)} poeng høyere
+            </p>
+          </div>
+        </div>
+      )}
 
       {nemesis && nemesisPlayer && (
         <div className="card p-5 flex items-center gap-3">
@@ -265,7 +316,15 @@ export function PlayerProfile() {
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {definitions.map((d) => {
             const e = earned.find((pa) => pa.achievement_id === d.id)
-            return <AchievementBadge key={d.id} achievement={d} earned={!!e} earnedAt={e?.earned_at} />
+            return (
+              <AchievementBadge
+                key={d.id}
+                achievement={d}
+                earned={!!e}
+                earnedAt={e?.earned_at}
+                rarity={rarityByAchievement[d.id]}
+              />
+            )
           })}
         </div>
       </div>
