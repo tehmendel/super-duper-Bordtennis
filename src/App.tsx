@@ -17,6 +17,8 @@ import { InvitePlayer } from '@/pages/InvitePlayer'
 import { MorePage } from '@/pages/MorePage'
 import { EditProfile } from '@/pages/EditProfile'
 import { Admin } from '@/pages/Admin'
+import { Ladder } from '@/pages/Ladder'
+import { LadderHistory } from '@/pages/LadderHistory'
 import { Seasons } from '@/pages/Seasons'
 import { Tournaments } from '@/pages/Tournaments'
 import { NewTournament } from '@/pages/NewTournament'
@@ -57,6 +59,8 @@ export default function App() {
         <Route path="/tournaments" element={<RequireAccess page="tournaments"><Tournaments /></RequireAccess>} />
         <Route path="/tournaments/new" element={<RequireAccess page="tournaments"><NewTournament /></RequireAccess>} />
         <Route path="/tournaments/:id" element={<RequireAccess page="tournaments"><TournamentDetail /></RequireAccess>} />
+        <Route path="/ladder" element={<RequireAccess page="ladder"><Ladder /></RequireAccess>} />
+        <Route path="/stigespillet" element={<RequireAccess page="ladder"><LadderHistory /></RequireAccess>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

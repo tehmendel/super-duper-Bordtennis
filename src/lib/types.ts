@@ -85,7 +85,7 @@ export interface RoleAssignment {
 
 export const PAGE_KEYS = [
   'dashboard', 'new_match', 'pending', 'history', 'leaderboard', 'head_to_head',
-  'seasons', 'tournaments', 'qr', 'invite', 'profile_edit',
+  'seasons', 'tournaments', 'ladder', 'qr', 'invite', 'profile_edit',
 ] as const
 
 export type PageKey = (typeof PAGE_KEYS)[number]
@@ -99,9 +99,36 @@ export const PAGE_LABELS: Record<PageKey, string> = {
   head_to_head: 'Head-to-head',
   seasons: 'Sesonger',
   tournaments: 'Turneringer',
+  ladder: 'Ladder',
   qr: 'QR',
   invite: 'Inviter spiller',
   profile_edit: 'Min profil',
+}
+
+export interface LadderPosition {
+  player_id: string
+  position: number
+  updated_at: string
+}
+
+export interface LadderChallengeLog {
+  id: string
+  match_id: string | null
+  challenger_id: string
+  defender_id: string
+  challenger_position_before: number
+  defender_position_before: number
+  winner_id: string
+  swapped: boolean
+  created_at: string
+}
+
+export interface Challenge {
+  id: string
+  challenger_id: string
+  challenged_id: string
+  status: 'pending' | 'played' | 'dismissed'
+  created_at: string
 }
 
 export interface AuditLogEntry {

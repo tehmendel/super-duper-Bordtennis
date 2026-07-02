@@ -1,19 +1,23 @@
 import { Link } from 'react-router-dom'
-import { Swords, QrCode, UserPlus, ChevronRight, ShieldCheck, Calendar, Medal } from 'lucide-react'
+import { Swords, QrCode, UserPlus, ChevronRight, ShieldCheck, Calendar, Medal, ListOrdered, ScrollText } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLadderEnabled } from '@/hooks/useLadderEnabled'
 import type { PageKey } from '@/lib/types'
 
-const ITEMS: { to: string; label: string; description: string; icon: typeof Swords; pageKey: PageKey }[] = [
+const ITEMS: { to: string; label: string; description: string; icon: typeof Swords; pageKey: PageKey; ladderOnly?: boolean }[] = [
   { to: '/head-to-head', label: 'Head-to-head', description: 'Sammenlign to spillere og se Elo-odds', icon: Swords, pageKey: 'head_to_head' },
   { to: '/seasons', label: 'Sesonger', description: 'Se tidligere sesonger og plasseringer', icon: Calendar, pageKey: 'seasons' },
   { to: '/tournaments', label: 'Turneringer', description: 'Se og delta i interne turneringer', icon: Medal, pageKey: 'tournaments' },
+  { to: '/ladder', label: 'Ladder', description: 'Utfordre spilleren over deg på stigen', icon: ListOrdered, pageKey: 'ladder', ladderOnly: true },
+  { to: '/stigespillet', label: 'Stigespillet', description: 'Historikk over ladder-utfordringer', icon: ScrollText, pageKey: 'ladder', ladderOnly: true },
   { to: '/qr', label: 'QR-kode', description: 'Heng opp ved bordet', icon: QrCode, pageKey: 'qr' },
   { to: '/invite', label: 'Inviter spiller', description: 'Send påloggingslenke til en kollega', icon: UserPlus, pageKey: 'invite' },
 ]
 
 export function MorePage() {
   const { player, hasAccess } = useAuth()
-  const visible = ITEMS.filter((item) => hasAccess(item.pageKey))
+  const ladderEnabled = useLadderEnabled()
+  const visible = ITEMS.filter((item) => hasAccess(item.pageKey) && (!item.ladderOnly || ladderEnabled))
   const items = player?.is_admin
     ? [...visible, { to: '/admin', label: 'Admin', description: 'Rediger kamper, sesonger, roller og statistikk', icon: ShieldCheck }]
     : visible
