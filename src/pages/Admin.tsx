@@ -95,15 +95,16 @@ export function Admin() {
   }
 
   const activePlayers = new Map<string, { name: string; avatar_url: string | null; count: number }>()
-  const dayBuckets = Array(7).fill(0)
-  const hourBuckets = Array(24).fill(0)
+  const heatmap: number[][] = Array.from({ length: 7 }, () => Array(24).fill(0))
+  const monthBuckets = new Map<string, number>()
 
   matches
     .filter((m) => m.status === 'confirmed')
     .forEach((m) => {
       const date = new Date(m.confirmed_at ?? m.created_at)
-      dayBuckets[date.getDay()]++
-      hourBuckets[date.getHours()]++
+      heatmap[date.getDay()][date.getHours()]++
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+      monthBuckets.set(monthKey, (monthBuckets.get(monthKey) ?? 0) + 1)
       for (const p of [m.player1, m.player2]) {
         const entry = activePlayers.get(p.id) ?? { name: p.name, avatar_url: p.avatar_url, count: 0 }
         entry.count++
@@ -112,8 +113,8 @@ export function Admin() {
     })
 
   const mostActive = [...activePlayers.values()].sort((a, b) => b.count - a.count)
-  const dayData = DAY_NAMES.map((name, i) => ({ name, kamper: dayBuckets[i] }))
-  const hourData = Array.from({ length: 24 }, (_, h) => ({ name: `${h}`, kamper: hourBuckets[h] }))
+  const maxHeat = Math.max(1, ...heatmap.flat())
+  const monthData = [...monthBuckets.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, count]) => ({ month, kamper: count }))
 
   return (
     <div className="flex flex-col gap-6">
@@ -184,23 +185,43 @@ export function Admin() {
             </div>
           </div>
 
-          <div className="card p-4">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Populære ukedager</p>
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={dayData}>
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={30} />
-                <Tooltip />
-                <Bar dataKey="kamper" fill="#2563eb" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="card p-4 overflow-x-auto">
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Aktivitetsheatmap (ukedag × klokkeslett)</p>
+            <table className="text-xs">
+              <thead>
+                <tr>
+                  <th className="p-1"></th>
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <th key={h} className="p-0.5 font-normal text-slate-400" style={{ minWidth: 18 }}>
+                      {h % 3 === 0 ? h : ''}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {DAY_NAMES.map((name, day) => (
+                  <tr key={day}>
+                    <td className="p-1 pr-2 font-medium text-slate-500">{name}</td>
+                    {heatmap[day].map((count, hour) => (
+                      <td key={hour} className="p-0.5">
+                        <div
+                          title={`${name} kl. ${hour}: ${count} kamper`}
+                          className="w-4 h-4 rounded-sm"
+                          style={{ backgroundColor: count === 0 ? 'transparent' : `rgba(37, 99, 235, ${0.15 + (count / maxHeat) * 0.85})`, border: count === 0 ? '1px solid rgb(226 232 240)' : 'none' }}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
           <div className="card p-4">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Populære klokkeslett</p>
+            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Kamper per måned</p>
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={hourData}>
-                <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={1} />
+              <BarChart data={monthData}>
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={30} />
                 <Tooltip />
                 <Bar dataKey="kamper" fill="#2563eb" radius={[4, 4, 0, 0]} />

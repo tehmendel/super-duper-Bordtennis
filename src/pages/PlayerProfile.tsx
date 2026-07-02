@@ -1,14 +1,29 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Pencil } from 'lucide-react'
+import { Pencil, Skull } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
 import { AchievementBadge } from '@/components/AchievementBadge'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
-import type { AchievementDefinition, LeaderboardRow, Match, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
+import {
+  averageSetMargin,
+  clutchRate,
+  comebackRate,
+  countUpsets,
+  deuceRate,
+  findNemesis,
+  peakRating,
+  ratingMomentum,
+  ratingVolatility,
+  winRateByWeekday,
+  type MatchWithSets,
+} from '@/lib/stats'
+import type { AchievementDefinition, LeaderboardRow, Match, MatchSet, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
+
+const WEEKDAY_NAMES = ['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør']
 
 export function PlayerProfile() {
   const { id } = useParams<{ id: string }>()
@@ -19,6 +34,9 @@ export function PlayerProfile() {
   const [total, setTotal] = useState(0)
   const [history, setHistory] = useState<RatingHistoryEntry[]>([])
   const [matches, setMatches] = useState<Match[]>([])
+  const [matchSets, setMatchSets] = useState<MatchSet[]>([])
+  const [allHistory, setAllHistory] = useState<RatingHistoryEntry[]>([])
+  const [players, setPlayers] = useState<Player[]>([])
   const [earned, setEarned] = useState<PlayerAchievement[]>([])
   const [definitions, setDefinitions] = useState<AchievementDefinition[]>([])
   const [loading, setLoading] = useState(true)
@@ -28,7 +46,7 @@ export function PlayerProfile() {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const [{ data: p }, { data: board }, { data: hist }, { data: m }, { data: pa }, { data: defs }] = await Promise.all([
+      const [{ data: p }, { data: board }, { data: hist }, { data: m }, { data: pa }, { data: defs }, { data: allP }] = await Promise.all([
         supabase.from('players').select('*').eq('id', id).single(),
         supabase.from('leaderboard').select('*').order('rating', { ascending: false }).returns<LeaderboardRow[]>(),
         supabase.from('ratings_history').select('*').eq('player_id', id).order('created_at').returns<RatingHistoryEntry[]>(),
@@ -41,6 +59,7 @@ export function PlayerProfile() {
           .returns<Match[]>(),
         supabase.from('player_achievements').select('*').eq('player_id', id).returns<PlayerAchievement[]>(),
         supabase.from('achievement_definitions').select('*').returns<AchievementDefinition[]>(),
+        supabase.from('players').select('*').returns<Player[]>(),
       ])
 
       if (cancelled) return
@@ -54,6 +73,20 @@ export function PlayerProfile() {
       setMatches(m ?? [])
       setEarned(pa ?? [])
       setDefinitions(defs ?? [])
+      setPlayers(allP ?? [])
+
+      const matchIds = (m ?? []).map((match) => match.id)
+      if (matchIds.length > 0) {
+        const [{ data: sets }, { data: hAll }] = await Promise.all([
+          supabase.from('match_sets').select('*').in('match_id', matchIds).returns<MatchSet[]>(),
+          supabase.from('ratings_history').select('*').in('match_id', matchIds).returns<RatingHistoryEntry[]>(),
+        ])
+        if (!cancelled) {
+          setMatchSets(sets ?? [])
+          setAllHistory(hAll ?? [])
+        }
+      }
+
       setLoading(false)
     }
     load()
@@ -80,6 +113,27 @@ export function PlayerProfile() {
     date: new Date(h.created_at).toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit' }),
     rating: Math.round(h.rating_after),
   }))
+
+  const matchesWithSets: MatchWithSets[] = matches.map((match) => ({
+    match,
+    sets: matchSets.filter((s) => s.match_id === match.id),
+  }))
+  const historyByMatch: Record<string, RatingHistoryEntry[]> = {}
+  allHistory.forEach((h) => {
+    historyByMatch[h.match_id] = [...(historyByMatch[h.match_id] ?? []), h]
+  })
+
+  const peak = peakRating(history)
+  const volatility = ratingVolatility(history)
+  const momentum = ratingMomentum(history)
+  const upsets = countUpsets(id!, matches, historyByMatch)
+  const avgMargin = averageSetMargin(id!, matchesWithSets)
+  const deuce = deuceRate(matchesWithSets)
+  const comeback = comebackRate(id!, matchesWithSets)
+  const clutch = clutchRate(id!, matchesWithSets)
+  const nemesis = findNemesis(id!, matches)
+  const nemesisPlayer = nemesis ? players.find((p) => p.id === nemesis.playerId) : null
+  const weekdayForm = winRateByWeekday(id!, matches)
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,6 +180,85 @@ export function PlayerProfile() {
           </ResponsiveContainer>
         </div>
       )}
+
+      <div>
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Avansert statistikk</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Peak rating</p>
+            <p className="text-xl font-bold">{peak ? Math.round(peak.rating) : '–'}</p>
+            {peak && <p className="text-[11px] text-slate-400">{new Date(peak.date).toLocaleDateString('no-NO')}</p>}
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Rating-volatilitet</p>
+            <p className="text-xl font-bold">{Math.round(volatility)}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Momentum (5)</p>
+            <p className={`text-xl font-bold ${momentum >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+              {momentum >= 0 ? '+' : ''}{Math.round(momentum)}
+            </p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Upsets vunnet</p>
+            <p className="text-xl font-bold">{upsets}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Snitt poengmargin</p>
+            <p className="text-xl font-bold">{avgMargin !== null ? avgMargin.toFixed(1) : '–'}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Deuce-rate</p>
+            <p className="text-xl font-bold">{deuce !== null ? `${Math.round(deuce * 100)}%` : '–'}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Comeback-rate</p>
+            <p className="text-xl font-bold">{comeback !== null ? `${Math.round(comeback * 100)}%` : '–'}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Clutch-rate</p>
+            <p className="text-xl font-bold">{clutch !== null ? `${Math.round(clutch * 100)}%` : '–'}</p>
+          </div>
+        </div>
+      </div>
+
+      {nemesis && nemesisPlayer && (
+        <div className="card p-5 flex items-center gap-3">
+          <Skull size={24} className="text-rose-500 shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Nemesis</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              <Link to={`/players/${nemesisPlayer.id}`} className="font-semibold text-rose-500 hover:underline">
+                {nemesisPlayer.name}
+              </Link>{' '}
+              dominerer med {nemesis.wins}–{nemesis.losses} ({Math.round((1 - nemesis.winRate) * 100)}% seiere mot deg)
+            </p>
+          </div>
+        </div>
+      )}
+
+      <div className="card p-4">
+        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Form per ukedag</p>
+        <div className="flex justify-between gap-1">
+          {weekdayForm.map((d, i) => {
+            const pct = d.total > 0 ? Math.round((d.wins / d.total) * 100) : null
+            return (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full h-16 flex items-end bg-slate-100 dark:bg-slate-800 rounded">
+                  {pct !== null && (
+                    <div
+                      className="w-full bg-brand-600 rounded"
+                      style={{ height: `${pct}%` }}
+                      title={`${pct}% (${d.wins}/${d.total})`}
+                    />
+                  )}
+                </div>
+                <span className="text-[10px] text-slate-400">{WEEKDAY_NAMES[i]}</span>
+              </div>
+            )
+          })}
+        </div>
+      </div>
 
       <div>
         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Prestasjoner</p>
