@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, UserCog, ShieldCheck, Calendar, Medal, BarChart3, Crown } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, ShieldCheck, Calendar, Medal, BarChart3, Crown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -14,7 +14,6 @@ const PRIMARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: bo
 ]
 
 const SECONDARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: boolean; pageKey: PageKey }[] = [
-  { to: '/profile/edit', label: 'Min profil', icon: UserCog, end: false, pageKey: 'profile_edit' },
   { to: '/head-to-head', label: 'Head-to-head', icon: Swords, end: false, pageKey: 'head_to_head' },
   { to: '/stats', label: 'Statistikk', icon: BarChart3, end: false, pageKey: 'stats' },
   { to: '/hall-of-fame', label: 'Hall of Fame', icon: Crown, end: false, pageKey: 'hall_of_fame' },
@@ -103,6 +102,11 @@ export function Layout() {
       <header className="flex items-center justify-between p-4 md:hidden border-b border-slate-200 dark:border-slate-800">
         <span className="text-lg font-bold">🏓 Super Duper Bordtennis</span>
         <div className="flex items-center gap-1">
+          {player && (
+            <NavLink to={`/players/${player.id}`} className="btn-ghost p-1.5">
+              <PlayerAvatar name={player.name} avatarUrl={player.avatar_url} size="sm" />
+            </NavLink>
+          )}
           <button onClick={toggle} className="btn-ghost p-2">
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>

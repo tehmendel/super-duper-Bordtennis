@@ -20,6 +20,11 @@ export function EditProfile() {
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState<string | null>(null)
 
+  const [newEmail, setNewEmail] = useState('')
+  const [emailBusy, setEmailBusy] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
+
   useEffect(() => {
     getExistingSubscription().then((sub) => setPushEnabled(!!sub))
   }, [])
@@ -43,6 +48,21 @@ export function EditProfile() {
   }
 
   if (!player || !session) return null
+
+  async function handleEmailChange(e: FormEvent) {
+    e.preventDefault()
+    setEmailBusy(true)
+    setEmailError(null)
+    setEmailSent(false)
+    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
+    setEmailBusy(false)
+    if (error) {
+      setEmailError(error.message)
+      return
+    }
+    setEmailSent(true)
+    setNewEmail('')
+  }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -114,6 +134,27 @@ export function EditProfile() {
 
         <button type="submit" disabled={saving} className="btn-primary">
           {saving ? 'Lagrer...' : 'Lagre endringer'}
+        </button>
+      </form>
+
+      <form onSubmit={handleEmailChange} className="card p-5 flex flex-col gap-3">
+        <p className="text-sm font-semibold">E-postadresse</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Nåværende: <strong>{session.user.email}</strong>. Du får en bekreftelseslenke på den nye adressen (og
+          eventuelt den gamle) før endringen trer i kraft.
+        </p>
+        <input
+          type="email"
+          required
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          placeholder="ny@epost.no"
+          className="input"
+        />
+        {emailError && <p className="text-sm text-rose-600">{emailError}</p>}
+        {emailSent && <p className="text-sm text-emerald-600">Sjekk innboksen din for å bekrefte den nye adressen.</p>}
+        <button type="submit" disabled={emailBusy} className="btn-secondary self-start">
+          {emailBusy ? 'Sender...' : 'Oppdater e-post'}
         </button>
       </form>
 
