@@ -235,7 +235,7 @@ export function PlayerProfile() {
             </p>
           </div>
           <div className="card p-4">
-            <p className="text-xs text-slate-500">Upsets vunnet</p>
+            <p className="text-xs text-slate-500">Sensasjonsseire (som underdog)</p>
             <p className="text-xl font-bold">{upsets}</p>
           </div>
           <div className="card p-4">

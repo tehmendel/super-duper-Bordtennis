@@ -34,7 +34,7 @@ interface HofRecord<T> {
 }
 
 const CARD_DEFS: CardDef[] = [
-  { id: 'upset', title: 'Størst upset noensinne' },
+  { id: 'upset', title: 'Størst sensasjon noensinne' },
   { id: 'streak', title: 'Lengste seiersrekke noensinne' },
   { id: 'peak', title: 'Høyeste rating noensinne' },
   { id: 'one_day', title: 'Flest kamper på én dag' },
