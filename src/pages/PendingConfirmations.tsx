@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { AchievementToast } from '@/components/AchievementToast'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
-import type { AchievementDefinition, Match, Player } from '@/lib/types'
+import type { AchievementDefinition, Match, MatchSet, Player } from '@/lib/types'
 
 interface EnrichedMatch extends Match {
   player1: Player
@@ -16,6 +16,7 @@ export function PendingConfirmations() {
   const { player, hasAccess } = useAuth()
   const [awaitingMe, setAwaitingMe] = useState<EnrichedMatch[]>([])
   const [awaitingOthers, setAwaitingOthers] = useState<EnrichedMatch[]>([])
+  const [setsByMatch, setSetsByMatch] = useState<Record<string, MatchSet[]>>({})
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [newAchievements, setNewAchievements] = useState<AchievementDefinition[]>([])
@@ -35,9 +36,28 @@ export function PendingConfirmations() {
     if (data) {
       setAwaitingMe(data.filter((m) => m.submitted_by !== player.id))
       setAwaitingOthers(data.filter((m) => m.submitted_by === player.id))
+
+      const matchIds = data.map((m) => m.id)
+      if (matchIds.length > 0) {
+        const { data: sets } = await supabase.from('match_sets').select('*').in('match_id', matchIds).returns<MatchSet[]>()
+        const grouped: Record<string, MatchSet[]> = {}
+        ;(sets ?? []).forEach((s) => {
+          grouped[s.match_id] = [...(grouped[s.match_id] ?? []), s]
+        })
+        setSetsByMatch(grouped)
+      } else {
+        setSetsByMatch({})
+      }
     }
     setLoading(false)
   }, [player])
+
+  function scoreFor(m: EnrichedMatch) {
+    const sets = setsByMatch[m.id] ?? []
+    const setsWon1 = sets.filter((s) => s.player1_score > s.player2_score).length
+    const setsWon2 = sets.filter((s) => s.player2_score > s.player1_score).length
+    return { setsWon1, setsWon2 }
+  }
 
   useEffect(() => {
     load()
@@ -77,7 +97,9 @@ export function PendingConfirmations() {
           <p className="text-slate-500 dark:text-slate-400">Ingen kamper å bekrefte akkurat nå.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {awaitingMe.map((m) => (
+            {awaitingMe.map((m) => {
+              const { setsWon1, setsWon2 } = scoreFor(m)
+              return (
               <div
                 key={m.id}
                 onClick={() => setViewingMatchId(m.id)}
@@ -87,7 +109,7 @@ export function PendingConfirmations() {
                   <PlayerAvatar name={m.player1.name} avatarUrl={m.player1.avatar_url} size="sm" />
                   <span className="font-medium">{m.player1.name}</span>
                   <span className="font-mono text-slate-500">
-                    {m.sets_won_player1 ?? '?'}–{m.sets_won_player2 ?? '?'}
+                    {setsWon1}–{setsWon2}
                   </span>
                   <span className="font-medium">{m.player2.name}</span>
                   <PlayerAvatar name={m.player2.name} avatarUrl={m.player2.avatar_url} size="sm" />
@@ -114,7 +136,8 @@ export function PendingConfirmations() {
                   <p className="text-xs text-slate-400 italic">Du har kun lesetilgang</p>
                 )}
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
@@ -125,17 +148,20 @@ export function PendingConfirmations() {
           <p className="text-slate-500 dark:text-slate-400 text-sm">Ingenting her.</p>
         ) : (
           <div className="flex flex-col gap-2">
-            {awaitingOthers.map((m) => (
+            {awaitingOthers.map((m) => {
+              const { setsWon1, setsWon2 } = scoreFor(m)
+              return (
               <div
                 key={m.id}
                 onClick={() => setViewingMatchId(m.id)}
                 className="card p-3 flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
                 <span>{m.player1.name} vs {m.player2.name}</span>
-                <span className="font-mono">{m.sets_won_player1 ?? '?'}–{m.sets_won_player2 ?? '?'}</span>
+                <span className="font-mono">{setsWon1}–{setsWon2}</span>
                 <span className="ml-auto italic">Venter...</span>
               </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
