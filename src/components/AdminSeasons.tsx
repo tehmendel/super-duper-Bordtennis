@@ -7,9 +7,11 @@ export function AdminSeasons() {
   const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
+  const [newStartDate, setNewStartDate] = useState('')
   const [newTargetDate, setNewTargetDate] = useState('')
   const [editing, setEditing] = useState<Season | null>(null)
   const [editName, setEditName] = useState('')
+  const [editStartDate, setEditStartDate] = useState('')
   const [editTargetDate, setEditTargetDate] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -34,10 +36,12 @@ export function AdminSeasons() {
     const { error } = await supabase.rpc('start_new_season', {
       p_name: newName.trim(),
       p_target_end_date: newTargetDate ? new Date(newTargetDate).toISOString() : null,
+      p_started_at: newStartDate ? new Date(newStartDate).toISOString() : null,
     })
     setBusy(false)
     if (error) return setError(error.message)
     setNewName('')
+    setNewStartDate('')
     setNewTargetDate('')
     await load()
   }
@@ -55,6 +59,7 @@ export function AdminSeasons() {
   function openEdit(s: Season) {
     setEditing(s)
     setEditName(s.name)
+    setEditStartDate(s.started_at.slice(0, 10))
     setEditTargetDate(s.target_end_date ? s.target_end_date.slice(0, 10) : '')
   }
 
@@ -66,6 +71,7 @@ export function AdminSeasons() {
       p_season_id: editing.id,
       p_name: editName.trim(),
       p_target_end_date: editTargetDate ? new Date(editTargetDate).toISOString() : null,
+      p_started_at: editStartDate ? new Date(editStartDate).toISOString() : null,
     })
     setBusy(false)
     if (error) return setError(error.message)
@@ -101,8 +107,22 @@ export function AdminSeasons() {
       <div className="card p-5 flex flex-col gap-3">
         <p className="text-sm font-semibold">Start ny sesong</p>
         <p className="text-xs text-slate-500 dark:text-slate-400">Låser inneværende sesongs plasseringer og nullstiller alle til 1000.</p>
-        <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="F.eks. Sesong 2" className="input" />
-        <input type="date" value={newTargetDate} onChange={(e) => setNewTargetDate(e.target.value)} className="input" />
+        <div>
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Navn</label>
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="F.eks. Sesong 2" className="input" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">
+            Startdato <span className="font-normal">(valgfritt – tomt betyr i dag)</span>
+          </label>
+          <input type="date" value={newStartDate} onChange={(e) => setNewStartDate(e.target.value)} className="input" />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">
+            Planlagt sluttdato <span className="font-normal">(valgfritt – vises som nedtelling)</span>
+          </label>
+          <input type="date" value={newTargetDate} onChange={(e) => setNewTargetDate(e.target.value)} className="input" />
+        </div>
         <button onClick={handleStartNew} disabled={busy} className="btn-primary self-start">Start ny sesong</button>
       </div>
 
@@ -119,8 +139,21 @@ export function AdminSeasons() {
           <div className="card w-full max-w-sm p-6" onClick={(e) => e.stopPropagation()}>
             <p className="text-lg font-bold mb-4">Rediger sesong</p>
             <div className="flex flex-col gap-3">
-              <input value={editName} onChange={(e) => setEditName(e.target.value)} className="input" />
-              <input type="date" value={editTargetDate} onChange={(e) => setEditTargetDate(e.target.value)} className="input" />
+              <div>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Navn</label>
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">Startdato</label>
+                <input type="date" value={editStartDate} onChange={(e) => setEditStartDate(e.target.value)} className="input" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1 block">
+                  Planlagt sluttdato <span className="font-normal">(valgfritt)</span>
+                </label>
+                <input type="date" value={editTargetDate} onChange={(e) => setEditTargetDate(e.target.value)} className="input" />
+              </div>
+              {error && <p className="text-sm text-rose-600">{error}</p>}
               <button onClick={handleSaveEdit} disabled={busy} className="btn-primary">Lagre</button>
             </div>
           </div>
