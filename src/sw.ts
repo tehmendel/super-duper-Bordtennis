@@ -26,14 +26,14 @@ self.addEventListener('push', (event) => {
       body: data.body ?? '',
       icon: iconUrl,
       badge: iconUrl,
-      data: { url: data.url ?? '/' },
+      data: { url: data.url ?? '.' },
     }),
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const targetUrl = new URL(event.notification.data?.url ?? '/', self.registration.scope).href
+  const targetUrl = new URL(event.notification.data?.url ?? '.', self.registration.scope).href
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

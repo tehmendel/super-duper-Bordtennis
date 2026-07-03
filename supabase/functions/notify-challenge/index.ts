@@ -38,7 +38,7 @@ Deno.serve(async (req: Request) => {
   const payload = JSON.stringify({
     title: "Du er utfordret! ⚔️",
     body: `${challenger.name} utfordrer deg til en kamp!`,
-    url: "/",
+    url: ".",
   });
 
   let sent = 0;

@@ -44,7 +44,7 @@ Deno.serve(async (req: Request) => {
   const payload = JSON.stringify({
     title: "Kamp venter på bekreftelse",
     body: `${submitterName} har registrert et resultat mot deg. Trykk for å bekrefte.`,
-    url: "/matches/pending",
+    url: "matches/pending",
   });
 
   let sent = 0;
