@@ -250,44 +250,42 @@ export function Admin() {
           </div>
         </div>
       ) : (
-        <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800">
-                <th className="text-left font-medium p-3">Spiller</th>
-                {hiddenDefs.map((d) => (
-                  <th key={d.id} className="p-3 text-center" title={d.description}>
-                    <span className="text-xl">{d.icon}</span>
-                    <div className="text-xs font-normal text-slate-500 dark:text-slate-400">{d.name}</div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {allPlayers.map((p) => (
-                <tr key={p.id} className="border-b border-slate-100 dark:border-slate-800 last:border-0">
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
-                      <span className="truncate">{p.name}</span>
-                    </div>
-                  </td>
-                  {hiddenDefs.map((d) => {
-                    const earned = hiddenEarned.find((e) => e.player_id === p.id && e.achievement_id === d.id)
-                    return (
-                      <td key={d.id} className="p-3 text-center">
-                        {earned ? (
-                          <span title={new Date(earned.earned_at).toLocaleDateString('no-NO')}>✅</span>
-                        ) : (
-                          <span className="text-slate-300 dark:text-slate-700">—</span>
-                        )}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {hiddenDefs.map((d) => {
+            const earners = hiddenEarned.filter((e) => e.achievement_id === d.id)
+            return (
+              <div key={d.id} className="card p-4 flex flex-col gap-3">
+                <div className="flex items-start gap-2">
+                  <span className="text-2xl shrink-0">{d.icon}</span>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{d.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{d.description}</p>
+                  </div>
+                  <span className="ml-auto text-xs font-medium text-slate-400 shrink-0">{earners.length}/{allPlayers.length}</span>
+                </div>
+                {earners.length === 0 ? (
+                  <p className="text-xs text-slate-400 italic">Ingen har fått denne ennå</p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {earners.map((e) => {
+                      const p = allPlayers.find((pl) => pl.id === e.player_id)
+                      if (!p) return null
+                      return (
+                        <div
+                          key={e.id}
+                          title={new Date(e.earned_at).toLocaleDateString('no-NO')}
+                          className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-full pl-1 pr-2.5 py-1"
+                        >
+                          <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
+                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{p.name}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       ))}
 
