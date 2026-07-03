@@ -99,10 +99,10 @@ export const PAGE_LABELS: Record<PageKey, string> = {
   leaderboard: 'Toppliste',
   head_to_head: 'Head-to-head',
   tournaments: 'Turneringer',
-  ladder: 'Ladder',
+  ladder: 'Stigespillet',
   qr: 'QR',
   players: 'Spillere',
-  profile_edit: 'Min profil',
+  profile_edit: 'Rediger profil',
 }
 
 export interface LadderPosition {
