@@ -38,7 +38,7 @@ export function Layout() {
   return (
     <div className="min-h-dvh flex flex-col md:flex-row">
       <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:dark:border-slate-800 md:p-4 md:gap-2">
-        <div className="px-2 py-3 text-lg font-bold">🏓 Super Duper Bordtennis</div>
+        <div className="px-2 py-3 text-lg font-bold">🏓 Bordtennisportalen</div>
         {visiblePrimary.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -102,7 +102,7 @@ export function Layout() {
       </aside>
 
       <header className="flex items-center justify-between p-4 md:hidden border-b border-slate-200 dark:border-slate-800">
-        <span className="text-lg font-bold">🏓 Super Duper Bordtennis</span>
+        <span className="text-lg font-bold">🏓 Bordtennisportalen</span>
         <div className="flex items-center gap-1">
           {player && (
             <NavLink to={`/players/${player.id}`} className="btn-ghost p-1.5">

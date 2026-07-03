@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ChevronUp, ChevronDown, Plus, Trash2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, Plus, Trash2, ListOrdered } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import type { LadderPosition, Player } from '@/lib/types'
@@ -15,6 +15,7 @@ export function AdminLadder() {
   const [loading, setLoading] = useState(true)
   const [ladderEnabled, setLadderEnabled] = useState(true)
   const [toggling, setToggling] = useState(false)
+  const [filling, setFilling] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -52,6 +53,14 @@ export function AdminLadder() {
     await load()
   }
 
+  async function fillFromLeaderboard() {
+    if (!confirm('Dette erstatter hele stigen med toppliste-rekkefølgen (høyest rating først). Fortsette?')) return
+    setFilling(true)
+    await supabase.rpc('admin_fill_ladder_from_leaderboard')
+    setFilling(false)
+    await load()
+  }
+
   async function addToLadder() {
     if (!addPlayerId) return
     const nextPosition = rows.length > 0 ? Math.max(...rows.map((r) => r.position)) + 1 : 1
@@ -81,6 +90,19 @@ export function AdminLadder() {
         </div>
         <button onClick={toggleLadder} disabled={toggling} className={ladderEnabled ? 'btn-secondary shrink-0' : 'btn-primary shrink-0'}>
           {toggling ? 'Vent...' : ladderEnabled ? 'Slå av' : 'Slå på'}
+        </button>
+      </div>
+
+      <div className="card p-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">Fyll stigen automatisk</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Legger til alle registrerte spillere i startrekkefølge basert på nåværende toppliste (høyest rating øverst).
+            Erstatter hele stigen.
+          </p>
+        </div>
+        <button onClick={fillFromLeaderboard} disabled={filling} className="btn-secondary shrink-0">
+          <ListOrdered size={16} /> {filling ? 'Fyller...' : 'Fyll fra toppliste'}
         </button>
       </div>
 

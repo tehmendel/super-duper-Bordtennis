@@ -140,7 +140,7 @@ export function Admin() {
           Roller
         </button>
         <button onClick={() => setTab('ladder')} className={tab === 'ladder' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
-          Ladder
+          Stigespillet
         </button>
         <button onClick={() => setTab('auditlog')} className={tab === 'auditlog' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
           Aktivitetslogg

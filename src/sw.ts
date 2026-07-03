@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
   const iconUrl = new URL('pwa-192.png', self.registration.scope).href
 
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'Super Duper Bordtennis', {
+    self.registration.showNotification(data.title ?? 'Bordtennisportalen', {
       body: data.body ?? '',
       icon: iconUrl,
       badge: iconUrl,

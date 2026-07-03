@@ -123,32 +123,33 @@ export function LadderHistory() {
         </>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Utfordringer spilt</p>
-          <p className="text-xl font-bold">{logs.length}</p>
-        </div>
-        <div className="card p-4">
-          <p className="text-xs text-slate-500">Vellykkede kupp</p>
-          <p className="text-xl font-bold">{successfulSteals}</p>
-        </div>
-      </div>
-
-      {mostActiveChallenger && (
-        <div className="card p-5 flex items-center gap-3">
-          <TrendingUp size={22} className="text-emerald-500 shrink-0" />
-          <p className="text-sm">
-            Mest aktive utfordrer:{' '}
-            <Link to={`/players/${mostActiveChallenger.player.id}`} className="font-semibold text-brand-600 hover:underline">
-              {mostActiveChallenger.player.name}
-            </Link>{' '}
-            ({mostActiveChallenger.count} utfordringer)
-          </p>
-        </div>
-      )}
-
       <div>
         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Historikk</p>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Utfordringer spilt</p>
+            <p className="text-xl font-bold">{logs.length}</p>
+          </div>
+          <div className="card p-4">
+            <p className="text-xs text-slate-500">Vellykkede kupp</p>
+            <p className="text-xl font-bold">{successfulSteals}</p>
+          </div>
+        </div>
+
+        {mostActiveChallenger && (
+          <div className="card p-5 flex items-center gap-3 mb-4">
+            <TrendingUp size={22} className="text-emerald-500 shrink-0" />
+            <p className="text-sm">
+              Mest aktive utfordrer:{' '}
+              <Link to={`/players/${mostActiveChallenger.player.id}`} className="font-semibold text-brand-600 hover:underline">
+                {mostActiveChallenger.player.name}
+              </Link>{' '}
+              ({mostActiveChallenger.count} utfordringer)
+            </p>
+          </div>
+        )}
+
         {logs.length === 0 ? (
           <p className="text-slate-500 dark:text-slate-400 text-sm">Ingen ladder-utfordringer registrert ennå.</p>
         ) : (

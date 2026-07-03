@@ -25,7 +25,7 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
       },
       manifest: {
-        name: 'Super Duper Bordtennis',
+        name: 'Bordtennisportalen',
         short_name: 'Bordtennis',
         description: 'Kampstatistikk og topplister for kontorets bordtennis-liga',
         theme_color: '#0f172a',

@@ -32,7 +32,7 @@ export function Login() {
     <div className="min-h-dvh flex items-center justify-center p-4">
       <div className="card w-full max-w-sm p-8 text-center">
         <div className="text-4xl mb-2">🏓</div>
-        <h1 className="text-xl font-bold mb-1">Super Duper Bordtennis</h1>
+        <h1 className="text-xl font-bold mb-1">Bordtennisportalen</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
           Logg inn med jobb-e-posten din for å registrere kamper og se statistikk.
         </p>
