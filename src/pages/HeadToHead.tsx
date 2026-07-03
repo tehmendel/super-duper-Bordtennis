@@ -12,7 +12,7 @@ import type { Match, Player } from '@/lib/types'
 const CARD_DEFS: CardDef[] = [
   { id: 'record', title: 'Head-to-head rekord' },
   { id: 'elo_odds', title: 'Hva om de møttes i dag?' },
-  { id: 'handicap', title: 'Håndikapp-forslag' },
+  { id: 'handicap', title: 'Handicap-forslag' },
 ]
 
 export function HeadToHead() {
@@ -135,7 +135,7 @@ export function HeadToHead() {
                   <div className="flex items-center gap-3">
                     <Zap size={20} className="text-amber-500 shrink-0" />
                     <p className="text-sm">
-                      Håndikapp-forslag for en jevnere uformell kamp: <strong>{a.rating > b.rating ? b.name : a.name}</strong> starter med{' '}
+                      Handicap-forslag for en jevnere uformell kamp: <strong>{a.rating > b.rating ? b.name : a.name}</strong> starter med{' '}
                       <strong>{suggestedHandicap(a.rating, b.rating)} poeng</strong> forsprang i et vanlig 11-poengs sett
                       <span className="text-slate-400"> (basert på ratingforskjell på {Math.round(Math.abs(a.rating - b.rating))})</span>.
                     </p>
