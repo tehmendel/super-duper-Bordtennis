@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, X, KeyRound, Pencil, Trash2 } from 'lucide-react'
+import { Plus, X, KeyRound, Pencil, Trash2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -16,17 +16,33 @@ export function Players() {
   const [editingInfo, setEditingInfo] = useState<Player | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [banner, setBanner] = useState<string | null>(null)
 
+  // Only the very first load should show the full-page "Laster..." state.
+  // Refreshing after a mutation must not unmount the page (and any open
+  // modal along with it) while it refetches.
   const load = useCallback(async () => {
-    setLoading(true)
     const { data } = await supabase.from('players').select('*').order('name').returns<Player[]>()
     setPlayers(data ?? [])
-    setLoading(false)
   }, [])
 
   useEffect(() => {
-    load()
+    load().then(() => setLoading(false))
   }, [load])
+
+  useEffect(() => {
+    if (!banner) return
+    const timer = setTimeout(() => setBanner(null), 4000)
+    return () => clearTimeout(timer)
+  }, [banner])
+
+  function handleSaved(message: string) {
+    setBanner(message)
+    setShowCreate(false)
+    setEditing(null)
+    setEditingInfo(null)
+    load()
+  }
 
   async function handleDelete(p: Player) {
     if (!confirm(`Slette ${p.name} permanent? Dette fjerner ogsa alle kamper, statistikk og prestasjoner for denne spilleren (ogsa fra motstandernes historikk). Kan ikke angres.`)) {
@@ -42,6 +58,7 @@ export function Players() {
       setDeleteError(data?.error ?? error?.message ?? 'Kunne ikke slette spilleren')
       return
     }
+    setBanner(`${p.name} er slettet`)
     await load()
   }
 
@@ -58,6 +75,15 @@ export function Players() {
         )}
       </div>
 
+      {banner && (
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 px-4 py-3 text-sm">
+          <CheckCircle2 size={16} className="shrink-0" />
+          <span className="flex-1">{banner}</span>
+          <button onClick={() => setBanner(null)} className="btn-ghost p-1">
+            <X size={14} />
+          </button>
+        </div>
+      )}
       {deleteError && <p className="text-sm text-rose-600">{deleteError}</p>}
 
       <div className="card divide-y divide-slate-200 dark:divide-slate-800">
@@ -94,14 +120,20 @@ export function Players() {
         ))}
       </div>
 
-      {showCreate && <CreatePlayerModal onClose={() => setShowCreate(false)} onDone={load} />}
-      {editing && <EditCredentialsModal player={editing} onClose={() => setEditing(null)} onDone={load} />}
-      {editingInfo && <EditInfoModal player={editingInfo} onClose={() => setEditingInfo(null)} onDone={load} />}
+      {showCreate && (
+        <CreatePlayerModal onClose={() => setShowCreate(false)} onSaved={(name) => handleSaved(`${name} er lagt til`)} />
+      )}
+      {editing && (
+        <EditCredentialsModal player={editing} onClose={() => setEditing(null)} onSaved={handleSaved} />
+      )}
+      {editingInfo && (
+        <EditInfoModal player={editingInfo} onClose={() => setEditingInfo(null)} onSaved={() => handleSaved('Spilleren er oppdatert')} />
+      )}
     </div>
   )
 }
 
-function EditInfoModal({ player, onClose, onDone }: { player: Player; onClose: () => void; onDone: () => void }) {
+function EditInfoModal({ player, onClose, onSaved }: { player: Player; onClose: () => void; onSaved: () => void }) {
   const [name, setName] = useState(player.name)
   const [avatarUrl, setAvatarUrl] = useState(player.avatar_url ?? '')
   const [saving, setSaving] = useState(false)
@@ -124,8 +156,7 @@ function EditInfoModal({ player, onClose, onDone }: { player: Player; onClose: (
       setError(error.message)
       return
     }
-    onDone()
-    onClose()
+    onSaved()
   }
 
   return (
@@ -156,7 +187,7 @@ function EditInfoModal({ player, onClose, onDone }: { player: Player; onClose: (
   )
 }
 
-function CreatePlayerModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function CreatePlayerModal({ onClose, onSaved }: { onClose: () => void; onSaved: (name: string) => void }) {
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -174,8 +205,7 @@ function CreatePlayerModal({ onClose, onDone }: { onClose: () => void; onDone: (
       setError(data?.error ?? error?.message ?? 'Kunne ikke opprette spiller')
       return
     }
-    onDone()
-    onClose()
+    onSaved(name)
   }
 
   return (
@@ -225,18 +255,18 @@ function CreatePlayerModal({ onClose, onDone }: { onClose: () => void; onDone: (
   )
 }
 
-function EditCredentialsModal({ player, onClose, onDone }: { player: Player; onClose: () => void; onDone: () => void }) {
+function EditCredentialsModal({ player, onClose, onSaved }: { player: Player; onClose: () => void; onSaved: (message: string) => void }) {
   const [username, setUsername] = useState(player.username ?? '')
   const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false)
 
   async function handleSave() {
     setError(null)
     setSaving(true)
 
-    if (username.trim() !== (player.username ?? '')) {
+    const usernameChanged = username.trim() !== (player.username ?? '')
+    if (usernameChanged) {
       const { error } = await supabase.rpc('admin_set_player_username', {
         p_player_id: player.id,
         p_username: username.trim().toLowerCase(),
@@ -260,8 +290,13 @@ function EditCredentialsModal({ player, onClose, onDone }: { player: Player; onC
     }
 
     setSaving(false)
-    setDone(true)
-    onDone()
+    const message =
+      usernameChanged && password
+        ? `Brukernavn og passord for ${player.name} er oppdatert`
+        : password
+          ? `Passordet for ${player.name} er byttet`
+          : `Brukernavnet til ${player.name} er oppdatert`
+    onSaved(message)
   }
 
   return (
@@ -304,7 +339,6 @@ function EditCredentialsModal({ player, onClose, onDone }: { player: Player; onC
             )}
           </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
-          {done && <p className="text-sm text-emerald-600">Lagret!</p>}
           <button onClick={handleSave} disabled={saving} className="btn-primary">
             {saving ? 'Lagrer...' : 'Lagre'}
           </button>
