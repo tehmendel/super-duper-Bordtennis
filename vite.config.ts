@@ -20,6 +20,13 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
+      // We register the service worker ourselves in main.tsx via
+      // virtual:pwa-register, so we get the autoUpdate reload-on-activate
+      // behavior. The default auto-injected script only registers the SW
+      // once with no update handling, which is what let stale, precached
+      // old builds (e.g. the old email-based login) linger in already-open
+      // tabs/installed PWAs until a manual refresh.
+      injectRegister: false,
       includeAssets: ['favicon.svg'],
       injectManifest: {
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,

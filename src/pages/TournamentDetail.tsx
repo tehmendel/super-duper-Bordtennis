@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -54,6 +54,10 @@ export function TournamentDetail() {
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [slotEditor, setSlotEditor] = useState<Slot | null>(null)
   const [bracketError, setBracketError] = useState<string | null>(null)
+  // Pointer-based drag (instead of native HTML5 drag-and-drop) so this also
+  // works with touch on mobile, not just mouse.
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null)
+  const suppressClickUntil = useRef(0)
 
   const load = useCallback(async () => {
     if (!id) return
@@ -179,6 +183,50 @@ export function TournamentDetail() {
     await load()
   }
 
+  function slotAtPoint(x: number, y: number): Slot | null {
+    const el = document.elementFromPoint(x, y)?.closest('[data-slot-key]')
+    const key = el?.getAttribute('data-slot-key')
+    if (!key) return null
+    const [matchId, slotStr] = key.split('::')
+    return { matchId, slot: Number(slotStr) as 1 | 2 }
+  }
+
+  function handleSlotPointerDown(e: React.PointerEvent, slot: Slot) {
+    if (!canEditBracket) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragStartPos.current = { x: e.clientX, y: e.clientY }
+    setDragSource(slot)
+  }
+
+  function handleSlotPointerMove(e: React.PointerEvent) {
+    if (!dragSource || !dragStartPos.current) return
+    const dx = e.clientX - dragStartPos.current.x
+    const dy = e.clientY - dragStartPos.current.y
+    if (Math.hypot(dx, dy) < 6) return
+    const target = slotAtPoint(e.clientX, e.clientY)
+    setDragOverKey(target ? `${target.matchId}::${target.slot}` : null)
+  }
+
+  function handleSlotPointerUp(e: React.PointerEvent) {
+    if (!dragSource || !dragStartPos.current) return
+    const moved = Math.hypot(e.clientX - dragStartPos.current.x, e.clientY - dragStartPos.current.y) >= 6
+    dragStartPos.current = null
+    if (!moved) {
+      // Just a tap/click, not a real drag — let the normal onClick (open
+      // match details) run, and don't attempt a drop.
+      setDragSource(null)
+      setDragOverKey(null)
+      return
+    }
+    suppressClickUntil.current = Date.now() + 300
+    const target = slotAtPoint(e.clientX, e.clientY)
+    if (target) handleDrop(target)
+    else {
+      setDragSource(null)
+      setDragOverKey(null)
+    }
+  }
+
   async function handleSetSlot(target: Slot, newPlayerId: string | null) {
     setBracketError(null)
     const { error } = await supabase.rpc('admin_set_tournament_slot', {
@@ -251,7 +299,10 @@ export function TournamentDetail() {
                       return (
                         <div
                           key={m.id}
-                          onClick={() => isDecided && setViewing(m)}
+                          onClick={() => {
+                            if (Date.now() < suppressClickUntil.current) return
+                            if (isDecided) setViewing(m)
+                          }}
                           className={`card p-3 flex flex-col gap-2 min-h-[92px] ${isDecided ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''}`}
                         >
                           {m.is_lucky_loser && (
@@ -261,7 +312,7 @@ export function TournamentDetail() {
                           )}
                           {[m.player1, m.player2].map((p, i) => {
                             const slotNum = (i + 1) as 1 | 2
-                            const slotKey = `${m.id}:${slotNum}`
+                            const slotKey = `${m.id}::${slotNum}`
                             const score = i === 0 ? m.player1_score : m.player2_score
                             const isWinner = p && m.winner_id === p.id
                             const oddsPct = odds !== null ? Math.round((i === 0 ? odds : 1 - odds) * 100) : null
@@ -269,29 +320,19 @@ export function TournamentDetail() {
                             return (
                               <div
                                 key={i}
-                                draggable={draggableRound}
-                                onDragStart={(e) => {
-                                  e.stopPropagation()
-                                  setDragSource({ matchId: m.id, slot: slotNum })
-                                }}
-                                onDragEnd={() => {
+                                data-slot-key={slotKey}
+                                onPointerDown={(e) => handleSlotPointerDown(e, { matchId: m.id, slot: slotNum })}
+                                onPointerMove={handleSlotPointerMove}
+                                onPointerUp={handleSlotPointerUp}
+                                onPointerCancel={() => {
+                                  dragStartPos.current = null
                                   setDragSource(null)
                                   setDragOverKey(null)
                                 }}
-                                onDragOver={(e) => {
-                                  if (!draggableRound) return
-                                  e.preventDefault()
-                                  setDragOverKey(slotKey)
-                                }}
-                                onDragLeave={() => setDragOverKey((k) => (k === slotKey ? null : k))}
-                                onDrop={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  if (draggableRound) handleDrop({ matchId: m.id, slot: slotNum })
-                                }}
+                                style={draggableRound ? { touchAction: 'none' } : undefined}
                                 className={`flex items-center gap-2 rounded-lg px-2 py-1 ${isWinner ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''} ${
                                   dragOverKey === slotKey ? 'ring-2 ring-brand-500' : ''
-                                } ${draggableRound ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                                } ${draggableRound ? 'cursor-grab active:cursor-grabbing select-none' : ''}`}
                               >
                                 {draggableRound && <GripVertical size={12} className="text-slate-300 dark:text-slate-600 shrink-0" />}
                                 {p ? (
@@ -309,6 +350,7 @@ export function TournamentDetail() {
                                 {oddsPct !== null && <span className="text-xs text-slate-400 font-mono">{oddsPct}%</span>}
                                 {draggableRound && (
                                   <button
+                                    onPointerDown={(e) => e.stopPropagation()}
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       setSlotEditor({ matchId: m.id, slot: slotNum })
