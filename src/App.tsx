@@ -13,7 +13,7 @@ import { Leaderboard } from '@/pages/Leaderboard'
 import { PlayerProfile } from '@/pages/PlayerProfile'
 import { HeadToHead } from '@/pages/HeadToHead'
 import { QrCodePage } from '@/pages/QrCodePage'
-import { InvitePlayer } from '@/pages/InvitePlayer'
+import { Players } from '@/pages/Players'
 import { MorePage } from '@/pages/MorePage'
 import { EditProfile } from '@/pages/EditProfile'
 import { Admin } from '@/pages/Admin'
@@ -46,10 +46,10 @@ export default function App() {
         <Route path="/matches/pending" element={<RequireAccess page="pending"><PendingConfirmations /></RequireAccess>} />
         <Route path="/matches" element={<RequireAccess page="history"><MatchHistory /></RequireAccess>} />
         <Route path="/leaderboard" element={<RequireAccess page="leaderboard"><Leaderboard /></RequireAccess>} />
+        <Route path="/players" element={<RequireAccess page="players"><Players /></RequireAccess>} />
         <Route path="/players/:id" element={<PlayerProfile />} />
         <Route path="/head-to-head" element={<RequireAccess page="head_to_head"><HeadToHead /></RequireAccess>} />
         <Route path="/qr" element={<RequireAccess page="qr"><QrCodePage /></RequireAccess>} />
-        <Route path="/invite" element={<RequireAccess page="invite"><InvitePlayer /></RequireAccess>} />
         <Route path="/more" element={<MorePage />} />
         <Route path="/profile/edit" element={<RequireAccess page="profile_edit"><EditProfile /></RequireAccess>} />
         <Route path="/admin" element={<Admin />} />

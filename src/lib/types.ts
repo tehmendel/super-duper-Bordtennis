@@ -4,6 +4,7 @@ export interface Player {
   id: string
   auth_user_id: string | null
   name: string
+  username: string | null
   avatar_url: string | null
   rating: number
   is_admin: boolean
@@ -85,7 +86,7 @@ export interface RoleAssignment {
 
 export const PAGE_KEYS = [
   'dashboard', 'new_match', 'pending', 'history', 'leaderboard', 'head_to_head',
-  'tournaments', 'ladder', 'qr', 'invite', 'profile_edit',
+  'tournaments', 'ladder', 'qr', 'players', 'profile_edit',
 ] as const
 
 export type PageKey = (typeof PAGE_KEYS)[number]
@@ -100,7 +101,7 @@ export const PAGE_LABELS: Record<PageKey, string> = {
   tournaments: 'Turneringer',
   ladder: 'Ladder',
   qr: 'QR',
-  invite: 'Inviter spiller',
+  players: 'Spillere',
   profile_edit: 'Min profil',
 }
 

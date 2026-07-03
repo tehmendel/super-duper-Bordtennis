@@ -2,8 +2,8 @@ import { useState, type FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
 
 export function Login() {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -11,21 +11,20 @@ export function Login() {
     e.preventDefault()
     setLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: window.location.origin + import.meta.env.BASE_URL,
-        shouldCreateUser: false,
-      },
+
+    const { data: email, error: resolveError } = await supabase.rpc('resolve_username_to_email', {
+      p_username: username.trim(),
     })
+
+    if (resolveError || !email) {
+      setLoading(false)
+      setError('Feil brukernavn eller passord')
+      return
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
     setLoading(false)
-    if (error) {
-      setError(
-        /not.*allow|signup/i.test(error.message)
-          ? 'Denne e-postadressen er ikke invitert ennå. Be en admin om en invitasjon.'
-          : error.message,
-      )
-    } else setSent(true)
+    if (signInError) setError('Feil brukernavn eller passord')
   }
 
   return (
@@ -34,29 +33,35 @@ export function Login() {
         <div className="text-4xl mb-2">🏓</div>
         <h1 className="text-xl font-bold mb-1">Bordtennisportalen</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-          Logg inn med jobb-e-posten din for å registrere kamper og se statistikk.
+          Logg inn med brukernavnet og passordet du har fått for å registrere kamper og se statistikk.
         </p>
 
-        {sent ? (
-          <p className="text-emerald-600 dark:text-emerald-400 text-sm">
-            Sjekk innboksen din — vi har sendt deg en påloggingslenke til <strong>{email}</strong>.
-          </p>
-        ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <input
-              type="email"
-              required
-              placeholder="deg@firma.no"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="input"
-            />
-            {error && <p className="text-sm text-rose-600">{error}</p>}
-            <button type="submit" disabled={loading} className="btn-primary">
-              {loading ? 'Sender...' : 'Send påloggingslenke'}
-            </button>
-          </form>
-        )}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            required
+            placeholder="Brukernavn"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoCapitalize="off"
+            className="input"
+          />
+          <input
+            type="password"
+            required
+            placeholder="Passord"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="input"
+          />
+          {error && <p className="text-sm text-rose-600">{error}</p>}
+          <button type="submit" disabled={loading} className="btn-primary">
+            {loading ? 'Logger inn...' : 'Logg inn'}
+          </button>
+        </form>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-6">
+          Har du ikke fått brukernavn og passord ennå? Spør en administrator.
+        </p>
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Swords, QrCode, UserPlus, ChevronRight, ShieldCheck, Medal, ScrollText } from 'lucide-react'
+import { Swords, QrCode, Users, ChevronRight, ShieldCheck, Medal, ScrollText } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLadderEnabled } from '@/hooks/useLadderEnabled'
 import type { PageKey } from '@/lib/types'
@@ -9,7 +9,7 @@ const ITEMS: { to: string; label: string; description: string; icon: typeof Swor
   { to: '/tournaments', label: 'Turneringer', description: 'Se og delta i interne turneringer', icon: Medal, pageKey: 'tournaments' },
   { to: '/stigespillet', label: 'Stigespillet', description: 'Ladder-stige og historikk over utfordringer', icon: ScrollText, pageKey: 'ladder', ladderOnly: true },
   { to: '/qr', label: 'QR-kode', description: 'Heng opp ved bordet', icon: QrCode, pageKey: 'qr' },
-  { to: '/invite', label: 'Inviter spiller', description: 'Send påloggingslenke til en kollega', icon: UserPlus, pageKey: 'invite' },
+  { to: '/players', label: 'Spillere', description: 'Se alle spillere og legg til nye', icon: Users, pageKey: 'players' },
 ]
 
 export function MorePage() {

@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, UserPlus, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, Users, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
 import { useLayoutEdit } from '@/contexts/LayoutEditContext'
@@ -20,7 +20,7 @@ const SECONDARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: 
   { to: '/tournaments', label: 'Turneringer', icon: Medal, end: false, pageKey: 'tournaments' },
   { to: '/stigespillet', label: 'Stigespillet', icon: ScrollText, end: false, pageKey: 'ladder', ladderOnly: true },
   { to: '/qr', label: 'QR', icon: QrCode, end: false, pageKey: 'qr' },
-  { to: '/invite', label: 'Inviter spiller', icon: UserPlus, end: false, pageKey: 'invite' },
+  { to: '/players', label: 'Spillere', icon: Users, end: false, pageKey: 'players' },
 ]
 
 const MOBILE_EXTRA_ITEM = { to: '/more', label: 'Mer', icon: MoreHorizontal, end: false }

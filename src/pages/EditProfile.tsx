@@ -20,10 +20,10 @@ export function EditProfile() {
   const [pushBusy, setPushBusy] = useState(false)
   const [pushError, setPushError] = useState<string | null>(null)
 
-  const [newEmail, setNewEmail] = useState('')
-  const [emailBusy, setEmailBusy] = useState(false)
-  const [emailError, setEmailError] = useState<string | null>(null)
-  const [emailSent, setEmailSent] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [passwordBusy, setPasswordBusy] = useState(false)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [passwordSaved, setPasswordSaved] = useState(false)
 
   useEffect(() => {
     getExistingSubscription().then((sub) => setPushEnabled(!!sub))
@@ -49,19 +49,24 @@ export function EditProfile() {
 
   if (!player || !session) return null
 
-  async function handleEmailChange(e: FormEvent) {
+  async function handlePasswordChange(e: FormEvent) {
     e.preventDefault()
-    setEmailBusy(true)
-    setEmailError(null)
-    setEmailSent(false)
-    const { error } = await supabase.auth.updateUser({ email: newEmail.trim() })
-    setEmailBusy(false)
-    if (error) {
-      setEmailError(error.message)
+    setPasswordBusy(true)
+    setPasswordError(null)
+    setPasswordSaved(false)
+    if (newPassword.length < 8) {
+      setPasswordBusy(false)
+      setPasswordError('Passordet må være minst 8 tegn')
       return
     }
-    setEmailSent(true)
-    setNewEmail('')
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPasswordBusy(false)
+    if (error) {
+      setPasswordError(error.message)
+      return
+    }
+    setPasswordSaved(true)
+    setNewPassword('')
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -141,24 +146,21 @@ export function EditProfile() {
             </button>
           </form>
 
-          <form onSubmit={handleEmailChange} className="card p-5 flex flex-col gap-3">
-            <p className="text-sm font-semibold">E-postadresse</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Nåværende: <strong>{session.user.email}</strong>. Du får en bekreftelseslenke på den nye adressen (og
-              eventuelt den gamle) før endringen trer i kraft.
-            </p>
+          <form onSubmit={handlePasswordChange} className="card p-5 flex flex-col gap-3">
+            <p className="text-sm font-semibold">Passord</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Bytt passordet du logger inn med.</p>
             <input
-              type="email"
+              type="password"
               required
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="ny@epost.no"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Nytt passord (minst 8 tegn)"
               className="input"
             />
-            {emailError && <p className="text-sm text-rose-600">{emailError}</p>}
-            {emailSent && <p className="text-sm text-emerald-600">Sjekk innboksen din for å bekrefte den nye adressen.</p>}
-            <button type="submit" disabled={emailBusy} className="btn-secondary self-start">
-              {emailBusy ? 'Sender...' : 'Oppdater e-post'}
+            {passwordError && <p className="text-sm text-rose-600">{passwordError}</p>}
+            {passwordSaved && <p className="text-sm text-emerald-600">Passordet er oppdatert.</p>}
+            <button type="submit" disabled={passwordBusy} className="btn-secondary self-start">
+              {passwordBusy ? 'Lagrer...' : 'Oppdater passord'}
             </button>
           </form>
         </>
@@ -166,7 +168,7 @@ export function EditProfile() {
         <div className="card p-5 flex items-center gap-3">
           <PlayerAvatar name={player.name} avatarUrl={player.avatar_url} />
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Du har kun lesetilgang og kan ikke endre navn, bilde eller e-post.
+            Du har kun lesetilgang og kan ikke endre navn, bilde eller passord.
           </p>
         </div>
       )}
