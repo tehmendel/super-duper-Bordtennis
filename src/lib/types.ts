@@ -85,7 +85,7 @@ export interface RoleAssignment {
 
 export const PAGE_KEYS = [
   'dashboard', 'new_match', 'pending', 'history', 'leaderboard', 'head_to_head',
-  'seasons', 'tournaments', 'ladder', 'qr', 'invite', 'profile_edit',
+  'tournaments', 'ladder', 'qr', 'invite', 'profile_edit',
 ] as const
 
 export type PageKey = (typeof PAGE_KEYS)[number]
@@ -97,7 +97,6 @@ export const PAGE_LABELS: Record<PageKey, string> = {
   history: 'Historikk',
   leaderboard: 'Toppliste',
   head_to_head: 'Head-to-head',
-  seasons: 'Sesonger',
   tournaments: 'Turneringer',
   ladder: 'Ladder',
   qr: 'QR',

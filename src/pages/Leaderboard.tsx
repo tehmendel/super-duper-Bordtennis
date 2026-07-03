@@ -43,7 +43,7 @@ const CARD_DEFS: CardDef[] = [
 
 export function Leaderboard() {
   const layout = useCardLayout('leaderboard', CARD_DEFS)
-  const [period, setPeriod] = useState<Period>('all')
+  const [period, setPeriod] = useState<Period>('season')
   const [rows, setRows] = useState<Row[]>([])
   const [seasonName, setSeasonName] = useState('')
   const [loading, setLoading] = useState(true)
@@ -238,7 +238,7 @@ export function Leaderboard() {
           {seasonName && <p className="text-sm text-slate-500 dark:text-slate-400">{seasonName}</p>}
         </div>
         <div className="flex gap-1 flex-wrap items-center">
-          {(['all', 'month', 'quarter', 'season'] as Period[]).map((p) => (
+          {(['season', 'all', 'month', 'quarter'] as Period[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
