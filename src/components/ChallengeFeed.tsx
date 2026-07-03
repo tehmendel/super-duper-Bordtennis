@@ -56,6 +56,13 @@ export function ChallengeFeed() {
     if (error && removed) setIncoming((prev) => [...prev, removed].sort((a, b) => b.created_at.localeCompare(a.created_at)))
   }
 
+  async function withdraw(id: string) {
+    const removed = outgoing.find((c) => c.id === id)
+    setOutgoing((prev) => prev.filter((c) => c.id !== id))
+    const { error } = await supabase.from('challenges').update({ status: 'dismissed' }).eq('id', id)
+    if (error && removed) setOutgoing((prev) => [...prev, removed].sort((a, b) => b.created_at.localeCompare(a.created_at)))
+  }
+
   if (incoming.length === 0 && outgoing.length === 0) return null
 
   return (
@@ -83,12 +90,17 @@ export function ChallengeFeed() {
           </div>
         ))}
         {outgoing.map((c) => (
-          <div key={c.id} className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <Hourglass size={14} className="shrink-0" />
-            <PlayerAvatar name={c.challenged.name} avatarUrl={c.challenged.avatar_url} size="sm" />
-            <p className="truncate">
-              Venter på svar fra <strong>{c.challenged.name}</strong>
-            </p>
+          <div key={c.id} className="flex items-center justify-between gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <div className="flex items-center gap-2 min-w-0">
+              <Hourglass size={14} className="shrink-0" />
+              <PlayerAvatar name={c.challenged.name} avatarUrl={c.challenged.avatar_url} size="sm" />
+              <p className="truncate">
+                Venter på svar fra <strong>{c.challenged.name}</strong>
+              </p>
+            </div>
+            <button onClick={() => withdraw(c.id)} className="btn-ghost p-1.5 shrink-0" title="Trekk tilbake utfordringen">
+              <X size={14} />
+            </button>
           </div>
         ))}
       </div>

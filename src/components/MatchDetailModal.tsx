@@ -59,6 +59,12 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
   const d1 = details?.deltas.find((d) => d.player_id === details.match.player1_id)
   const d2 = details?.deltas.find((d) => d.player_id === details.match.player2_id)
 
+  // sets_won_* is only computed when a match is confirmed — fall back to
+  // counting the sets directly so pending matches (viewed before approving)
+  // still show a score instead of a blank dash.
+  const setsWon1 = details?.match.sets_won_player1 ?? details?.sets.filter((s) => s.player1_score > s.player2_score).length ?? null
+  const setsWon2 = details?.match.sets_won_player2 ?? details?.sets.filter((s) => s.player2_score > s.player1_score).length ?? null
+
   const iLost = details && currentPlayer && details.match.winner_id && details.match.winner_id !== currentPlayer.id &&
     (details.match.player1_id === currentPlayer.id || details.match.player2_id === currentPlayer.id)
 
@@ -111,7 +117,7 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                   )}
                 </div>
                 <span className="text-2xl font-bold text-slate-400">
-                  {details.match.sets_won_player1}–{details.match.sets_won_player2}
+                  {setsWon1 ?? '?'}–{setsWon2 ?? '?'}
                 </span>
                 <div className="flex flex-col items-center gap-1">
                   <PlayerAvatar name={details.player2.name} avatarUrl={details.player2.avatar_url} />
@@ -151,7 +157,9 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
               {roast && <p className="text-xs italic text-slate-500 dark:text-slate-400 text-center">"{roast}"</p>}
 
               <div className="text-xs text-slate-400 text-center">
-                {new Date(details.match.confirmed_at ?? details.match.created_at).toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })}
+                {details.match.status === 'pending'
+                  ? 'Venter på bekreftelse'
+                  : new Date(details.match.confirmed_at ?? details.match.created_at).toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })}
               </div>
             </div>
 
