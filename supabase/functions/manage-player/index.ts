@@ -104,5 +104,23 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true });
   }
 
+  if (body.action === "delete") {
+    const playerId = typeof body.playerId === "string" ? body.playerId : "";
+    if (!playerId) return jsonResponse({ error: "Mangler spiller-id" }, 400);
+
+    // Runs as the caller (not the service role) so admin_delete_player()'s
+    // internal current_player_can_write() check resolves auth.uid() correctly.
+    const { data: authUserId, error: deleteError } = await callerClient.rpc("admin_delete_player", {
+      p_player_id: playerId,
+    });
+    if (deleteError) return jsonResponse({ error: deleteError.message }, 400);
+
+    if (authUserId) {
+      await admin.auth.admin.deleteUser(authUserId as string);
+    }
+
+    return jsonResponse({ success: true });
+  }
+
   return jsonResponse({ error: "Ukjent handling" }, 400);
 });

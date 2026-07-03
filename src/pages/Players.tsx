@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, X, KeyRound } from 'lucide-react'
+import { Plus, X, KeyRound, Pencil, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -13,6 +13,9 @@ export function Players() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [editing, setEditing] = useState<Player | null>(null)
+  const [editingInfo, setEditingInfo] = useState<Player | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -24,6 +27,23 @@ export function Players() {
   useEffect(() => {
     load()
   }, [load])
+
+  async function handleDelete(p: Player) {
+    if (!confirm(`Slette ${p.name} permanent? Dette fjerner ogsa alle kamper, statistikk og prestasjoner for denne spilleren (ogsa fra motstandernes historikk). Kan ikke angres.`)) {
+      return
+    }
+    setDeleteError(null)
+    setDeletingId(p.id)
+    const { data, error } = await supabase.functions.invoke('manage-player', {
+      body: { action: 'delete', playerId: p.id },
+    })
+    setDeletingId(null)
+    if (error || data?.error) {
+      setDeleteError(data?.error ?? error?.message ?? 'Kunne ikke slette spilleren')
+      return
+    }
+    await load()
+  }
 
   if (loading) return <p className="text-slate-500">Laster...</p>
 
@@ -38,6 +58,8 @@ export function Players() {
         )}
       </div>
 
+      {deleteError && <p className="text-sm text-rose-600">{deleteError}</p>}
+
       <div className="card divide-y divide-slate-200 dark:divide-slate-800">
         {players.map((p) => (
           <div key={p.id} className="flex items-center gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
@@ -51,9 +73,22 @@ export function Players() {
               </div>
             </Link>
             {canWrite && (
-              <button onClick={() => setEditing(p)} className="btn-ghost p-2" title="Rediger påloggingsdetaljer">
-                <KeyRound size={16} />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button onClick={() => setEditingInfo(p)} className="btn-ghost p-2" title="Rediger navn/bilde">
+                  <Pencil size={16} />
+                </button>
+                <button onClick={() => setEditing(p)} className="btn-ghost p-2" title="Rediger påloggingsdetaljer">
+                  <KeyRound size={16} />
+                </button>
+                <button
+                  onClick={() => handleDelete(p)}
+                  disabled={deletingId === p.id}
+                  className="btn-ghost p-2 text-rose-600"
+                  title="Slett spiller"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             )}
           </div>
         ))}
@@ -61,6 +96,62 @@ export function Players() {
 
       {showCreate && <CreatePlayerModal onClose={() => setShowCreate(false)} onDone={load} />}
       {editing && <EditCredentialsModal player={editing} onClose={() => setEditing(null)} onDone={load} />}
+      {editingInfo && <EditInfoModal player={editingInfo} onClose={() => setEditingInfo(null)} onDone={load} />}
+    </div>
+  )
+}
+
+function EditInfoModal({ player, onClose, onDone }: { player: Player; onClose: () => void; onDone: () => void }) {
+  const [name, setName] = useState(player.name)
+  const [avatarUrl, setAvatarUrl] = useState(player.avatar_url ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSave() {
+    setError(null)
+    if (!name.trim()) {
+      setError('Navn kan ikke være tomt')
+      return
+    }
+    setSaving(true)
+    const { error } = await supabase.rpc('admin_update_player', {
+      p_player_id: player.id,
+      p_name: name.trim(),
+      p_avatar_url: avatarUrl.trim() || null,
+    })
+    setSaving(false)
+    if (error) {
+      setError(error.message)
+      return
+    }
+    onDone()
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="card w-full max-w-sm p-6 animate-pop-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold">Rediger spiller</h2>
+          <button onClick={onClose} className="btn-ghost p-1.5">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-sm font-medium mb-1 block">Navn</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} className="input" />
+          </div>
+          <div>
+            <label className="text-sm font-medium mb-1 block">Avatar-URL</label>
+            <input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} className="input" placeholder="Valgfritt" />
+          </div>
+          {error && <p className="text-sm text-rose-600">{error}</p>}
+          <button onClick={handleSave} disabled={saving} className="btn-primary">
+            {saving ? 'Lagrer...' : 'Lagre'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
