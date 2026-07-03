@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, X, Trash2, Dices, Plus } from 'lucide-react'
+import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -14,6 +14,7 @@ interface EnrichedMatch extends TournamentMatch {
 }
 
 type SetScore = { player1_score: string; player2_score: string }
+type Slot = { matchId: string; slot: 1 | 2 }
 
 function chunkPairs<T>(arr: T[]): T[][] {
   const out: T[][] = []
@@ -41,6 +42,7 @@ export function TournamentDetail() {
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [matchSets, setMatchSets] = useState<TournamentMatchSet[]>([])
   const [participants, setParticipants] = useState<TournamentParticipant[]>([])
+  const [allPlayers, setAllPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<EnrichedMatch | null>(null)
   const [sets, setSets] = useState<SetScore[]>([{ player1_score: '', player2_score: '' }])
@@ -48,10 +50,15 @@ export function TournamentDetail() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const [dragSource, setDragSource] = useState<Slot | null>(null)
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null)
+  const [slotEditor, setSlotEditor] = useState<Slot | null>(null)
+  const [bracketError, setBracketError] = useState<string | null>(null)
+
   const load = useCallback(async () => {
     if (!id) return
     setLoading(true)
-    const [{ data: t }, { data: m }, { data: p }] = await Promise.all([
+    const [{ data: t }, { data: m }, { data: p }, { data: allP }] = await Promise.all([
       supabase.from('tournaments').select('*').eq('id', id).single(),
       supabase
         .from('tournament_matches')
@@ -61,10 +68,12 @@ export function TournamentDetail() {
         .order('position')
         .returns<EnrichedMatch[]>(),
       supabase.from('tournament_participants').select('*').eq('tournament_id', id).returns<TournamentParticipant[]>(),
+      supabase.from('players').select('*').order('name').returns<Player[]>(),
     ])
     setTournament(t ?? null)
     setMatches(m ?? [])
     setParticipants(p ?? [])
+    setAllPlayers(allP ?? [])
 
     const matchIds = (m ?? []).map((match) => match.id)
     if (matchIds.length > 0) {
@@ -94,6 +103,10 @@ export function TournamentDetail() {
     tournament.status === 'completed' && finalMatch?.winner_id
       ? [finalMatch.player1, finalMatch.player2].find((p) => p?.id === finalMatch.winner_id) ?? null
       : null
+
+  const canEditBracket = !!player?.is_admin
+  const round1Matches = matches.filter((m) => m.round === 1)
+  const seatedPlayerIds = new Set(round1Matches.flatMap((m) => [m.player1_id, m.player2_id]).filter((x): x is string => !!x))
 
   function openEdit(m: EnrichedMatch) {
     setEditing(m)
@@ -145,6 +158,42 @@ export function TournamentDetail() {
     navigate('/tournaments')
   }
 
+  async function handleDrop(target: Slot) {
+    const source = dragSource
+    setDragSource(null)
+    setDragOverKey(null)
+    if (!source) return
+    if (source.matchId === target.matchId && source.slot === target.slot) return
+
+    setBracketError(null)
+    const { error } = await supabase.rpc('admin_swap_tournament_players', {
+      p_match_a_id: source.matchId,
+      p_slot_a: source.slot,
+      p_match_b_id: target.matchId,
+      p_slot_b: target.slot,
+    })
+    if (error) {
+      setBracketError(error.message)
+      return
+    }
+    await load()
+  }
+
+  async function handleSetSlot(target: Slot, newPlayerId: string | null) {
+    setBracketError(null)
+    const { error } = await supabase.rpc('admin_set_tournament_slot', {
+      p_match_id: target.matchId,
+      p_slot: target.slot,
+      p_player_id: newPlayerId,
+    })
+    if (error) {
+      setBracketError(error.message)
+      return
+    }
+    setSlotEditor(null)
+    await load()
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center gap-3">
@@ -162,6 +211,13 @@ export function TournamentDetail() {
         )}
       </div>
 
+      {canEditBracket && (
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Som admin kan du dra spillere mellom kampene i runde 1 for å endre kampoppsettet, eller bruke <UserCog size={12} className="inline" />-knappen for å bytte ut eller fjerne en deltaker.
+        </p>
+      )}
+      {bracketError && <p className="text-sm text-rose-600">{bracketError}</p>}
+
       {champion && (
         <div className="card p-6 flex flex-col items-center gap-2 bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-amber-950/40 dark:to-yellow-950/10 border-2 border-amber-300 dark:border-amber-700">
           <Trophy size={36} className="text-amber-500" />
@@ -178,6 +234,7 @@ export function TournamentDetail() {
           const roundMatches = matches.filter((m) => m.round === round).sort((a, b) => a.position - b.position)
           const isLast = roundIdx === rounds.length - 1
           const pairs = chunkPairs(roundMatches)
+          const draggableRound = canEditBracket && round === 1
           return (
             <div key={round} className="flex flex-col shrink-0 w-64">
               <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 text-center mb-4">
@@ -187,7 +244,7 @@ export function TournamentDetail() {
                 {pairs.map((pair, pairIdx) => (
                   <div key={pairIdx} className="relative flex flex-col justify-between gap-6">
                     {pair.map((m) => {
-                      const canEdit = player?.is_admin && m.player1_id && m.player2_id && m.player1_score === null
+                      const canRegister = player?.is_admin && m.player1_id && m.player2_id && m.player1_score === null
                       const isDecided = m.winner_id !== null
                       const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
                       const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null
@@ -203,12 +260,40 @@ export function TournamentDetail() {
                             </span>
                           )}
                           {[m.player1, m.player2].map((p, i) => {
+                            const slotNum = (i + 1) as 1 | 2
+                            const slotKey = `${m.id}:${slotNum}`
                             const score = i === 0 ? m.player1_score : m.player2_score
                             const isWinner = p && m.winner_id === p.id
                             const oddsPct = odds !== null ? Math.round((i === 0 ? odds : 1 - odds) * 100) : null
                             const seed = p ? seedByPlayer.get(p.id) : null
                             return (
-                              <div key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${isWinner ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
+                              <div
+                                key={i}
+                                draggable={draggableRound}
+                                onDragStart={(e) => {
+                                  e.stopPropagation()
+                                  setDragSource({ matchId: m.id, slot: slotNum })
+                                }}
+                                onDragEnd={() => {
+                                  setDragSource(null)
+                                  setDragOverKey(null)
+                                }}
+                                onDragOver={(e) => {
+                                  if (!draggableRound) return
+                                  e.preventDefault()
+                                  setDragOverKey(slotKey)
+                                }}
+                                onDragLeave={() => setDragOverKey((k) => (k === slotKey ? null : k))}
+                                onDrop={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  if (draggableRound) handleDrop({ matchId: m.id, slot: slotNum })
+                                }}
+                                className={`flex items-center gap-2 rounded-lg px-2 py-1 ${isWinner ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''} ${
+                                  dragOverKey === slotKey ? 'ring-2 ring-brand-500' : ''
+                                } ${draggableRound ? 'cursor-grab active:cursor-grabbing' : ''}`}
+                              >
+                                {draggableRound && <GripVertical size={12} className="text-slate-300 dark:text-slate-600 shrink-0" />}
                                 {p ? (
                                   <>
                                     {round === 1 && seed !== undefined && seed !== null && (
@@ -222,10 +307,22 @@ export function TournamentDetail() {
                                 )}
                                 {score !== null && <span className="font-mono text-sm">{score}</span>}
                                 {oddsPct !== null && <span className="text-xs text-slate-400 font-mono">{oddsPct}%</span>}
+                                {draggableRound && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setSlotEditor({ matchId: m.id, slot: slotNum })
+                                    }}
+                                    className="btn-ghost p-1 shrink-0"
+                                    title="Bytt ut eller fjern deltaker"
+                                  >
+                                    <UserCog size={14} />
+                                  </button>
+                                )}
                               </div>
                             )
                           })}
-                          {canEdit && (
+                          {canRegister && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -307,6 +404,45 @@ export function TournamentDetail() {
           </div>
         </div>
       )}
+
+      {slotEditor && (() => {
+        const match = matches.find((m) => m.id === slotEditor.matchId)
+        const currentPlayer = match ? (slotEditor.slot === 1 ? match.player1 : match.player2) : null
+        const available = allPlayers.filter((p) => !seatedPlayerIds.has(p.id) || p.id === currentPlayer?.id)
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSlotEditor(null)}>
+            <div className="card w-full max-w-xs p-6 animate-pop-in" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold">Bytt deltaker</h2>
+                <button onClick={() => setSlotEditor(null)} className="btn-ghost p-1.5">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                {currentPlayer && (
+                  <button
+                    onClick={() => handleSetSlot(slotEditor, null)}
+                    className="btn-secondary text-sm justify-start text-rose-600"
+                  >
+                    Fjern {currentPlayer.name} (ledig plass)
+                  </button>
+                )}
+                {available
+                  .filter((p) => p.id !== currentPlayer?.id)
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleSetSlot(slotEditor, p.id)}
+                      className="btn-secondary text-sm justify-start"
+                    >
+                      <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" /> {p.name}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       <TournamentMatchDetailModal
         match={viewing}
