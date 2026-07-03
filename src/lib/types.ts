@@ -170,6 +170,7 @@ export interface Tournament {
   status: 'in_progress' | 'completed'
   created_by: string | null
   created_at: string
+  completed_at: string | null
 }
 
 export interface TournamentParticipant {
@@ -199,6 +200,13 @@ export interface TournamentMatchSet {
   set_number: number
   player1_score: number
   player2_score: number
+}
+
+export interface TournamentCommentary {
+  id: string
+  tournament_id: string
+  content: string
+  created_at: string
 }
 
 export interface LeaderboardRow {

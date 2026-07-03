@@ -10,3 +10,4 @@ dist-ssr
 *.tsbuildinfo
 vite.config.d.ts
 vite.config.js
+.claude/scheduled_tasks.lock

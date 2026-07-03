@@ -1,12 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog } from 'lucide-react'
+import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog, Maximize2, Minimize2, Timer, Users, Calendar, Swords, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { TournamentMatchDetailModal } from '@/components/TournamentMatchDetailModal'
+import { useFullscreen } from '@/hooks/useFullscreen'
 import { eloWinProbability } from '@/lib/stats'
-import type { Player, Tournament, TournamentMatch, TournamentMatchSet, TournamentParticipant } from '@/lib/types'
+import type { Player, Tournament, TournamentCommentary, TournamentMatch, TournamentMatchSet, TournamentParticipant } from '@/lib/types'
+
+function formatDuration(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000))
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+  if (hours > 0) return `${hours}t ${minutes}min`
+  if (minutes > 0) return `${minutes}min ${seconds}s`
+  return `${seconds}s`
+}
 
 interface EnrichedMatch extends TournamentMatch {
   player1: Player | null
@@ -43,6 +54,7 @@ export function TournamentDetail() {
   const [matchSets, setMatchSets] = useState<TournamentMatchSet[]>([])
   const [participants, setParticipants] = useState<TournamentParticipant[]>([])
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
+  const [commentary, setCommentary] = useState<TournamentCommentary[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<EnrichedMatch | null>(null)
   const [sets, setSets] = useState<SetScore[]>([{ player1_score: '', player2_score: '' }])
@@ -58,6 +70,15 @@ export function TournamentDetail() {
   // works with touch on mobile, not just mouse.
   const dragStartPos = useRef<{ x: number; y: number } | null>(null)
   const suppressClickUntil = useRef(0)
+
+  const { ref: fullscreenRef, isFullscreen, toggle: toggleFullscreen } = useFullscreen<HTMLDivElement>()
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    if (tournament?.status !== 'in_progress') return
+    const timer = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(timer)
+  }, [tournament?.status])
 
   const load = useCallback(async () => {
     if (!id) return
@@ -93,9 +114,30 @@ export function TournamentDetail() {
     setLoading(false)
   }, [id])
 
+  const loadCommentary = useCallback(async () => {
+    if (!id) return
+    const { data } = await supabase
+      .from('tournament_commentary')
+      .select('*')
+      .eq('tournament_id', id)
+      .order('created_at', { ascending: false })
+      .returns<TournamentCommentary[]>()
+    setCommentary(data ?? [])
+  }, [id])
+
   useEffect(() => {
     load()
-  }, [load])
+    loadCommentary()
+  }, [load, loadCommentary])
+
+  // AI commentary is generated asynchronously by a background trigger, so
+  // poll for new lines while the tournament is still going instead of
+  // requiring a manual refresh.
+  useEffect(() => {
+    if (tournament?.status !== 'in_progress') return
+    const timer = setInterval(loadCommentary, 8000)
+    return () => clearInterval(timer)
+  }, [tournament?.status, loadCommentary])
 
   if (loading) return <p className="text-slate-500">Laster...</p>
   if (!tournament) return <p className="text-slate-500">Fant ikke turneringen.</p>
@@ -111,6 +153,12 @@ export function TournamentDetail() {
   const canEditBracket = !!player?.is_admin
   const round1Matches = matches.filter((m) => m.round === 1)
   const seatedPlayerIds = new Set(round1Matches.flatMap((m) => [m.player1_id, m.player2_id]).filter((x): x is string => !!x))
+
+  const matchesDecided = matches.filter((m) => m.winner_id !== null).length
+  const currentRound = tournament.status === 'completed' ? rounds.length : (matches.find((m) => m.winner_id === null && m.player1_id && m.player2_id)?.round ?? rounds[0])
+  const elapsedMs = tournament.completed_at
+    ? new Date(tournament.completed_at).getTime() - new Date(tournament.created_at).getTime()
+    : now - new Date(tournament.created_at).getTime()
 
   function openEdit(m: EnrichedMatch) {
     setEditing(m)
@@ -243,21 +291,75 @@ export function TournamentDetail() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div
+      ref={fullscreenRef}
+      className={isFullscreen ? 'flex flex-col gap-6 bg-white dark:bg-slate-950 min-h-screen p-6 overflow-y-auto' : 'flex flex-col gap-6'}
+    >
       <div className="flex items-center gap-3">
         <Trophy size={24} className="text-amber-500" />
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{tournament.name}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {tournament.status === 'completed' ? 'Fullført 🏆' : 'Pågår'}
+            {tournament.status === 'completed' ? 'Fullført 🏆' : `Pågår — ${roundName(currentRound, rounds.length)}`}
           </p>
         </div>
+        <button onClick={toggleFullscreen} className="btn-ghost p-2" title={isFullscreen ? 'Avslutt fullskjerm' : 'Vis i fullskjerm'}>
+          {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+        </button>
         {player?.is_admin && (
           <button onClick={handleDelete} className="btn-ghost p-2 text-rose-600" title="Slett turnering">
             <Trash2 size={18} />
           </button>
         )}
       </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="card p-3 flex items-center gap-2">
+          <Users size={18} className="text-brand-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Deltakere</p>
+            <p className="font-bold text-sm">{participants.length}</p>
+          </div>
+        </div>
+        <div className="card p-3 flex items-center gap-2">
+          <Swords size={18} className="text-brand-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Kamper spilt</p>
+            <p className="font-bold text-sm">{matchesDecided}/{matches.length}</p>
+          </div>
+        </div>
+        <div className="card p-3 flex items-center gap-2">
+          <Calendar size={18} className="text-brand-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Startet</p>
+            <p className="font-bold text-sm">{new Date(tournament.created_at).toLocaleDateString('no-NO', { day: 'numeric', month: 'short' })}</p>
+          </div>
+        </div>
+        <div className="card p-3 flex items-center gap-2">
+          <Timer size={18} className="text-brand-600 shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {tournament.status === 'completed' ? 'Varighet' : 'Pågått i'}
+            </p>
+            <p className="font-bold text-sm font-mono">{formatDuration(elapsedMs)}</p>
+          </div>
+        </div>
+      </div>
+
+      {commentary.length > 0 && (
+        <div className="card p-4 bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/20 dark:to-indigo-950/10 border border-violet-200 dark:border-violet-900">
+          <p className="text-xs font-bold text-violet-700 dark:text-violet-400 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+            <Sparkles size={14} /> AI-kommentator
+          </p>
+          <div className="flex flex-col gap-2">
+            {commentary.slice(0, 5).map((c, i) => (
+              <p key={c.id} className={`text-sm ${i === 0 ? 'font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+                {c.content}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
 
       {canEditBracket && (
         <p className="text-xs text-slate-500 dark:text-slate-400">
