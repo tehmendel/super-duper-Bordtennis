@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { X, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import type { Match, MatchSet } from '@/lib/types'
+import { PlayerAvatar } from '@/components/PlayerAvatar'
+import type { Match, MatchSet, Player } from '@/lib/types'
 
 type SetScore = { player1_score: string; player2_score: string }
 
@@ -10,7 +11,7 @@ export function AdminMatchEditModal({
   onClose,
   onSaved,
 }: {
-  match: Match | null
+  match: (Match & { player1?: Player; player2?: Player }) | null
   onClose: () => void
   onSaved: () => void
 }) {
@@ -87,6 +88,21 @@ export function AdminMatchEditModal({
           <p className="text-slate-500">Laster...</p>
         ) : (
           <div className="flex flex-col gap-3">
+            {match.player1 && match.player2 && (
+              <div className="flex items-center gap-2 mb-1">
+                <span className="w-14 shrink-0" />
+                <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                  <PlayerAvatar name={match.player1.name} avatarUrl={match.player1.avatar_url} size="sm" />
+                  <span className="text-xs font-medium truncate max-w-full">{match.player1.name}</span>
+                </div>
+                <span className="text-slate-300 dark:text-slate-700">–</span>
+                <div className="flex-1 flex flex-col items-center gap-1 min-w-0">
+                  <PlayerAvatar name={match.player2.name} avatarUrl={match.player2.avatar_url} size="sm" />
+                  <span className="text-xs font-medium truncate max-w-full">{match.player2.name}</span>
+                </div>
+                <span className="w-8 shrink-0" />
+              </div>
+            )}
             {sets.map((s, i) => (
               <div key={i} className="flex items-center gap-2">
                 <span className="w-14 text-sm text-slate-500">Sett {i + 1}</span>

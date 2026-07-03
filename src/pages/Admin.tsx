@@ -32,7 +32,7 @@ export function Admin() {
   const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog' | 'ladder'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingMatch, setEditingMatch] = useState<Match | null>(null)
+  const [editingMatch, setEditingMatch] = useState<EnrichedMatch | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
 
   const [allPlayers, setAllPlayers] = useState<Player[]>([])

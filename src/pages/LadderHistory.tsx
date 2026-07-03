@@ -45,13 +45,32 @@ export function LadderHistory() {
     load()
   }, [load])
 
+  const myRowForCheck = player ? rows.find((r) => r.player_id === player.id) : null
+  const rivalAboveForCheck = myRowForCheck ? rows.find((r) => r.position === myRowForCheck.position - 1) : null
+  const rivalAboveId = rivalAboveForCheck?.player_id
+
+  useEffect(() => {
+    if (!player || !rivalAboveId) return
+    let cancelled = false
+    supabase
+      .from('challenges')
+      .select('id')
+      .eq('challenger_id', player.id)
+      .eq('challenged_id', rivalAboveId)
+      .eq('status', 'pending')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setChallengeSent(!!data)
+      })
+    return () => { cancelled = true }
+  }, [player, rivalAboveId])
+
   if (!ladderEnabled) {
     return <p className="text-slate-500 dark:text-slate-400">Ladder-funksjonen er slått av av admin.</p>
   }
   if (loading) return <p className="text-slate-500">Laster...</p>
 
-  const myRow = player ? rows.find((r) => r.player_id === player.id) : null
-  const rivalAbove = myRow ? rows.find((r) => r.position === myRow.position - 1) : null
+  const rivalAbove = rivalAboveForCheck
 
   const successfulSteals = logs.filter((l) => l.swapped).length
   const challengerCounts = new Map<string, { player: Player; count: number }>()
@@ -65,9 +84,9 @@ export function LadderHistory() {
   async function handleChallenge() {
     if (!player || !rivalAbove) return
     setChallenging(true)
-    await supabase.from('challenges').insert({ challenger_id: player.id, challenged_id: rivalAbove.player_id })
+    const { error } = await supabase.from('challenges').insert({ challenger_id: player.id, challenged_id: rivalAbove.player_id })
     setChallenging(false)
-    setChallengeSent(true)
+    if (!error || error.code === '23505') setChallengeSent(true)
   }
 
   return (

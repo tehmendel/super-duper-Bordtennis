@@ -54,6 +54,26 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
     }
   }, [matchId])
 
+  const iLost = !!(details && currentPlayer && details.match.winner_id && details.match.winner_id !== currentPlayer.id &&
+    (details.match.player1_id === currentPlayer.id || details.match.player2_id === currentPlayer.id))
+  const winnerId = details?.match.winner_id
+
+  useEffect(() => {
+    if (!iLost || !currentPlayer || !winnerId) return
+    let cancelled = false
+    supabase
+      .from('challenges')
+      .select('id')
+      .eq('challenger_id', currentPlayer.id)
+      .eq('challenged_id', winnerId)
+      .eq('status', 'pending')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setRematchSent(!!data)
+      })
+    return () => { cancelled = true }
+  }, [iLost, currentPlayer, winnerId])
+
   if (!matchId) return null
 
   const d1 = details?.deltas.find((d) => d.player_id === details.match.player1_id)
@@ -65,15 +85,12 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
   const setsWon1 = details?.match.sets_won_player1 ?? details?.sets.filter((s) => s.player1_score > s.player2_score).length ?? null
   const setsWon2 = details?.match.sets_won_player2 ?? details?.sets.filter((s) => s.player2_score > s.player1_score).length ?? null
 
-  const iLost = details && currentPlayer && details.match.winner_id && details.match.winner_id !== currentPlayer.id &&
-    (details.match.player1_id === currentPlayer.id || details.match.player2_id === currentPlayer.id)
-
   async function handleRematch() {
     if (!details || !currentPlayer || !details.match.winner_id) return
     setRematchBusy(true)
-    await supabase.from('challenges').insert({ challenger_id: currentPlayer.id, challenged_id: details.match.winner_id })
+    const { error } = await supabase.from('challenges').insert({ challenger_id: currentPlayer.id, challenged_id: details.match.winner_id })
     setRematchBusy(false)
-    setRematchSent(true)
+    if (!error || error.code === '23505') setRematchSent(true)
   }
 
   const roast =

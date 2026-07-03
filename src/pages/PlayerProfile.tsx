@@ -100,6 +100,22 @@ export function PlayerProfile() {
     return () => { cancelled = true }
   }, [id])
 
+  useEffect(() => {
+    if (!id || !currentPlayer || currentPlayer.id === id) return
+    let cancelled = false
+    supabase
+      .from('challenges')
+      .select('id')
+      .eq('challenger_id', currentPlayer.id)
+      .eq('challenged_id', id)
+      .eq('status', 'pending')
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!cancelled) setChallengeSent(!!data)
+      })
+    return () => { cancelled = true }
+  }, [id, currentPlayer])
+
   if (loading) return <p className="text-slate-500">Laster...</p>
   if (!player) return <p className="text-slate-500">Fant ikke spilleren.</p>
 
@@ -189,9 +205,9 @@ export function PlayerProfile() {
             <button
               onClick={async () => {
                 setChallenging(true)
-                await supabase.from('challenges').insert({ challenger_id: currentPlayer.id, challenged_id: player.id })
+                const { error } = await supabase.from('challenges').insert({ challenger_id: currentPlayer.id, challenged_id: player.id })
                 setChallenging(false)
-                setChallengeSent(true)
+                if (!error || error.code === '23505') setChallengeSent(true)
               }}
               disabled={challenging || challengeSent}
               className="btn-secondary py-2 px-3 text-sm"

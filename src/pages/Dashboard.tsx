@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { PlusCircle, CheckCircle2, TrendingUp, TrendingDown, Hourglass, Target, Clock3, Shuffle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -45,109 +45,122 @@ export function Dashboard() {
   const [ownMatches, setOwnMatches] = useState<(Match & { opponent: Player })[]>([])
   const [pastMatchIndex, setPastMatchIndex] = useState(0)
 
-  useEffect(() => {
+  const load = useCallback(async () => {
     if (!player) return
-    let cancelled = false
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-    async function load() {
-      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const [
+      { data: board },
+      { data: seasonData },
+      { data: recent },
+      { count: totalCount },
+      { data: allOwn },
+      { count },
+      { data: history },
+    ] = await Promise.all([
+      supabase.from('leaderboard').select('*').order('rating', { ascending: false }).returns<LeaderboardRow[]>(),
+      supabase.from('seasons').select('*').eq('is_active', true).maybeSingle(),
+      supabase
+        .from('matches')
+        .select('*')
+        .eq('status', 'confirmed')
+        .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
+        .order('confirmed_at', { ascending: false })
+        .limit(5)
+        .returns<Match[]>(),
+      supabase
+        .from('matches')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'confirmed')
+        .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`),
+      supabase
+        .from('matches')
+        .select('*, p1:players!matches_player1_id_fkey(*), p2:players!matches_player2_id_fkey(*)')
+        .eq('status', 'confirmed')
+        .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`),
+      supabase
+        .from('matches')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending')
+        .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
+        .neq('submitted_by', player.id),
+      supabase.from('ratings_history').select('*, match:matches(*)').gte('created_at', weekAgo),
+    ])
 
-      const [
-        { data: board },
-        { data: seasonData },
-        { data: recent },
-        { count: totalCount },
-        { data: allOwn },
-        { count },
-        { data: history },
-      ] = await Promise.all([
-        supabase.from('leaderboard').select('*').order('rating', { ascending: false }).returns<LeaderboardRow[]>(),
-        supabase.from('seasons').select('*').eq('is_active', true).maybeSingle(),
-        supabase
-          .from('matches')
-          .select('*')
-          .eq('status', 'confirmed')
-          .or(`player1_id.eq.${player!.id},player2_id.eq.${player!.id}`)
-          .order('confirmed_at', { ascending: false })
-          .limit(5)
-          .returns<Match[]>(),
-        supabase
-          .from('matches')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'confirmed')
-          .or(`player1_id.eq.${player!.id},player2_id.eq.${player!.id}`),
-        supabase
-          .from('matches')
-          .select('*, p1:players!matches_player1_id_fkey(*), p2:players!matches_player2_id_fkey(*)')
-          .eq('status', 'confirmed')
-          .or(`player1_id.eq.${player!.id},player2_id.eq.${player!.id}`),
-        supabase
-          .from('matches')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'pending')
-          .or(`player1_id.eq.${player!.id},player2_id.eq.${player!.id}`)
-          .neq('submitted_by', player!.id),
-        supabase.from('ratings_history').select('*, match:matches(*)').gte('created_at', weekAgo),
-      ])
-
-      if (cancelled) return
-
-      if (board) {
-        const idx = board.findIndex((r) => r.id === player!.id)
-        setRank(idx >= 0 ? idx + 1 : null)
-        setTotalPlayers(board.length)
-        if (idx > 0) {
-          setPointsBehindLeader({ name: board[0].name, points: Math.round(board[0].rating - board[idx].rating) })
-        } else {
-          setPointsBehindLeader(null)
-        }
+    if (board) {
+      const idx = board.findIndex((r) => r.id === player.id)
+      setRank(idx >= 0 ? idx + 1 : null)
+      setTotalPlayers(board.length)
+      if (idx > 0) {
+        setPointsBehindLeader({ name: board[0].name, points: Math.round(board[0].rating - board[idx].rating) })
+      } else {
+        setPointsBehindLeader(null)
       }
-
-      setSeason(seasonData ?? null)
-
-      if (recent) {
-        setForm(recent.map((m) => (m.winner_id === player!.id ? 'W' : 'L')))
-        if (recent.length > 0) {
-          const lastDate = new Date(recent[0].confirmed_at ?? recent[0].created_at)
-          setDaysSinceLastMatch(Math.floor((Date.now() - lastDate.getTime()) / (24 * 60 * 60 * 1000)))
-        }
-      }
-
-      setTotalMatchesPlayed(totalCount ?? 0)
-
-      if (allOwn) {
-        const withOpponent = allOwn.map((m) => ({
-          ...m,
-          opponent: m.player1_id === player!.id ? m.p2 : m.p1,
-        }))
-        setOwnMatches(withOpponent)
-        setPastMatchIndex(withOpponent.length > 0 ? Math.floor(Math.random() * withOpponent.length) : 0)
-      }
-
-      setPendingCount(count ?? 0)
-
-      if (history && history.length > 0) {
-        const top = [...history].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0]
-        const match = top.match as Match
-        const { data: matchPlayers } = await supabase
-          .from('players')
-          .select('*')
-          .in('id', [match.player1_id, match.player2_id])
-        const p1 = matchPlayers?.find((p) => p.id === match.player1_id)
-        const p2 = matchPlayers?.find((p) => p.id === match.player2_id)
-        if (p1 && p2 && !cancelled) {
-          setMatchOfWeek({ match, player1: p1, player2: p2, delta: top.delta })
-        }
-      }
-
-      setLoading(false)
     }
 
-    load()
-    return () => {
-      cancelled = true
+    setSeason(seasonData ?? null)
+
+    if (recent) {
+      setForm(recent.map((m) => (m.winner_id === player.id ? 'W' : 'L')))
+      if (recent.length > 0) {
+        const lastDate = new Date(recent[0].confirmed_at ?? recent[0].created_at)
+        setDaysSinceLastMatch(Math.floor((Date.now() - lastDate.getTime()) / (24 * 60 * 60 * 1000)))
+      }
     }
+
+    setTotalMatchesPlayed(totalCount ?? 0)
+
+    if (allOwn) {
+      const withOpponent = allOwn.map((m) => ({
+        ...m,
+        opponent: m.player1_id === player.id ? m.p2 : m.p1,
+      }))
+      setOwnMatches(withOpponent)
+      setPastMatchIndex(withOpponent.length > 0 ? Math.floor(Math.random() * withOpponent.length) : 0)
+    }
+
+    setPendingCount(count ?? 0)
+
+    if (history && history.length > 0) {
+      const top = [...history].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0]
+      const match = top.match as Match
+      const { data: matchPlayers } = await supabase
+        .from('players')
+        .select('*')
+        .in('id', [match.player1_id, match.player2_id])
+      const p1 = matchPlayers?.find((p) => p.id === match.player1_id)
+      const p2 = matchPlayers?.find((p) => p.id === match.player2_id)
+      if (p1 && p2) {
+        setMatchOfWeek({ match, player1: p1, player2: p2, delta: top.delta })
+      }
+    } else {
+      setMatchOfWeek(null)
+    }
+
+    setLoading(false)
   }, [player])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // Refetch whenever the tab regains focus/visibility — e.g. after
+  // confirming a match on another device, or after the tab sat in the
+  // background for a while — instead of only ever fetching once on mount.
+  useEffect(() => {
+    function onFocus() {
+      load()
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === 'visible') load()
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+    }
+  }, [load])
 
   if (!player) return null
 
