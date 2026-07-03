@@ -190,6 +190,7 @@ export interface TournamentMatch {
   player2_score: number | null
   winner_id: string | null
   next_match_id: string | null
+  is_lucky_loser: boolean
 }
 
 export interface LeaderboardRow {

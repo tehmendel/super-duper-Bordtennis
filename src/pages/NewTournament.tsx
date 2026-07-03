@@ -74,8 +74,9 @@ export function NewTournament() {
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Deltakerne sås etter nåværende rating (høyest rating møter lavest rangerte først). Byes fylles automatisk om
-          antallet ikke er en toerpotens.
+          Deltakerne sås etter nåværende rating (høyest rating møter lavest rangerte først). Er antallet ikke en
+          toerpotens, får den som ellers ville fått walkover i stedet en "lucky loser"-kamp mot den beste taperen fra
+          runde 1.
         </p>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}

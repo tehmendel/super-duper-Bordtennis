@@ -1,15 +1,33 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, X, Trash2 } from 'lucide-react'
+import { Trophy, X, Trash2, Dices } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { eloWinProbability } from '@/lib/stats'
-import type { Player, Tournament, TournamentMatch } from '@/lib/types'
+import type { Player, Tournament, TournamentMatch, TournamentParticipant } from '@/lib/types'
 
 interface EnrichedMatch extends TournamentMatch {
   player1: Player | null
   player2: Player | null
+}
+
+function chunkPairs<T>(arr: T[]): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < arr.length; i += 2) out.push(arr.slice(i, i + 2))
+  return out
+}
+
+function roundName(round: number, totalRounds: number) {
+  const remaining = totalRounds - round + 1
+  switch (remaining) {
+    case 1: return 'Finale'
+    case 2: return 'Semifinale'
+    case 3: return 'Kvartfinale'
+    case 4: return 'Åttedelsfinale'
+    case 5: return 'Sekstendedelsfinale'
+    default: return `Runde ${round}`
+  }
 }
 
 export function TournamentDetail() {
@@ -18,6 +36,7 @@ export function TournamentDetail() {
   const { player } = useAuth()
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
+  const [participants, setParticipants] = useState<TournamentParticipant[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<EnrichedMatch | null>(null)
   const [score1, setScore1] = useState('')
@@ -28,7 +47,7 @@ export function TournamentDetail() {
   const load = useCallback(async () => {
     if (!id) return
     setLoading(true)
-    const [{ data: t }, { data: m }] = await Promise.all([
+    const [{ data: t }, { data: m }, { data: p }] = await Promise.all([
       supabase.from('tournaments').select('*').eq('id', id).single(),
       supabase
         .from('tournament_matches')
@@ -37,9 +56,11 @@ export function TournamentDetail() {
         .order('round')
         .order('position')
         .returns<EnrichedMatch[]>(),
+      supabase.from('tournament_participants').select('*').eq('tournament_id', id).returns<TournamentParticipant[]>(),
     ])
     setTournament(t ?? null)
     setMatches(m ?? [])
+    setParticipants(p ?? [])
     setLoading(false)
   }, [id])
 
@@ -50,14 +71,13 @@ export function TournamentDetail() {
   if (loading) return <p className="text-slate-500">Laster...</p>
   if (!tournament) return <p className="text-slate-500">Fant ikke turneringen.</p>
 
+  const seedByPlayer = new Map(participants.map((p) => [p.player_id, p.seed]))
   const rounds = [...new Set(matches.map((m) => m.round))].sort((a, b) => a - b)
-  const roundName = (round: number) => {
-    const remaining = rounds.length - round + 1
-    if (remaining === 1) return 'Finale'
-    if (remaining === 2) return 'Semifinale'
-    if (remaining === 3) return 'Kvartfinale'
-    return `Runde ${round}`
-  }
+  const finalMatch = matches.find((m) => m.round === rounds[rounds.length - 1])
+  const champion =
+    tournament.status === 'completed' && finalMatch?.winner_id
+      ? [finalMatch.player1, finalMatch.player2].find((p) => p?.id === finalMatch.winner_id) ?? null
+      : null
 
   function openEdit(m: EnrichedMatch) {
     setEditing(m)
@@ -113,47 +133,81 @@ export function TournamentDetail() {
         )}
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-4">
-        {rounds.map((round) => (
-          <div key={round} className="flex flex-col gap-4 justify-around shrink-0 w-56">
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 text-center">{roundName(round)}</p>
-            {matches
-              .filter((m) => m.round === round)
-              .map((m) => {
-                const canEdit = player?.is_admin && m.player1_id && m.player2_id && m.player1_score === null
-                const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
-                const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null
-                return (
-                  <div key={m.id} className="card p-3 flex flex-col gap-2">
-                    {[m.player1, m.player2].map((p, i) => {
-                      const score = i === 0 ? m.player1_score : m.player2_score
-                      const isWinner = p && m.winner_id === p.id
-                      const oddsPct = odds !== null ? Math.round((i === 0 ? odds : 1 - odds) * 100) : null
+      {champion && (
+        <div className="card p-6 flex flex-col items-center gap-2 bg-gradient-to-br from-amber-50 to-yellow-100 dark:from-amber-950/40 dark:to-yellow-950/10 border-2 border-amber-300 dark:border-amber-700">
+          <Trophy size={36} className="text-amber-500" />
+          <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">Turneringsvinner</p>
+          <div className="flex items-center gap-3">
+            <PlayerAvatar name={champion.name} avatarUrl={champion.avatar_url} size="lg" />
+            <p className="text-2xl font-black">{champion.name}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-stretch gap-10 overflow-x-auto pb-4">
+        {rounds.map((round, roundIdx) => {
+          const roundMatches = matches.filter((m) => m.round === round).sort((a, b) => a.position - b.position)
+          const isLast = roundIdx === rounds.length - 1
+          const pairs = chunkPairs(roundMatches)
+          return (
+            <div key={round} className="flex flex-col shrink-0 w-64">
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 text-center mb-4">
+                {roundName(round, rounds.length)}
+              </p>
+              <div className="flex-1 flex flex-col justify-around gap-10">
+                {pairs.map((pair, pairIdx) => (
+                  <div key={pairIdx} className="relative flex flex-col justify-between gap-6">
+                    {pair.map((m) => {
+                      const canEdit = player?.is_admin && m.player1_id && m.player2_id && m.player1_score === null
+                      const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
+                      const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null
                       return (
-                        <div key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${isWinner ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
-                          {p ? (
-                            <>
-                              <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
-                              <span className={`flex-1 text-sm truncate ${isWinner ? 'font-bold' : ''}`}>{p.name}</span>
-                            </>
-                          ) : (
-                            <span className="flex-1 text-sm text-slate-400 italic">Venter...</span>
+                        <div key={m.id} className="card p-3 flex flex-col gap-2 min-h-[92px]">
+                          {m.is_lucky_loser && (
+                            <span className="inline-flex items-center gap-1 self-start text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                              <Dices size={10} /> Lucky loser
+                            </span>
                           )}
-                          {score !== null && <span className="font-mono text-sm">{score}</span>}
-                          {oddsPct !== null && <span className="text-xs text-slate-400 font-mono">{oddsPct}%</span>}
+                          {[m.player1, m.player2].map((p, i) => {
+                            const score = i === 0 ? m.player1_score : m.player2_score
+                            const isWinner = p && m.winner_id === p.id
+                            const oddsPct = odds !== null ? Math.round((i === 0 ? odds : 1 - odds) * 100) : null
+                            const seed = p ? seedByPlayer.get(p.id) : null
+                            return (
+                              <div key={i} className={`flex items-center gap-2 rounded-lg px-2 py-1 ${isWinner ? 'bg-emerald-50 dark:bg-emerald-900/20' : ''}`}>
+                                {p ? (
+                                  <>
+                                    {round === 1 && seed !== undefined && seed !== null && (
+                                      <span className="text-[10px] text-slate-400 font-mono w-4 text-right shrink-0">{seed}</span>
+                                    )}
+                                    <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
+                                    <span className={`flex-1 text-sm truncate ${isWinner ? 'font-bold' : ''}`}>{p.name}</span>
+                                  </>
+                                ) : (
+                                  <span className="flex-1 text-sm text-slate-400 italic">Venter...</span>
+                                )}
+                                {score !== null && <span className="font-mono text-sm">{score}</span>}
+                                {oddsPct !== null && <span className="text-xs text-slate-400 font-mono">{oddsPct}%</span>}
+                              </div>
+                            )
+                          })}
+                          {canEdit && (
+                            <button onClick={() => openEdit(m)} className="btn-secondary text-xs py-1.5">
+                              Registrer resultat
+                            </button>
+                          )}
                         </div>
                       )
                     })}
-                    {canEdit && (
-                      <button onClick={() => openEdit(m)} className="btn-secondary text-xs py-1.5">
-                        Registrer resultat
-                      </button>
+                    {!isLast && pair.length === 2 && (
+                      <div className="absolute -right-5 top-[25%] bottom-[25%] w-5 border-r-2 border-t-2 border-b-2 border-slate-300 dark:border-slate-700 rounded-r-lg" />
                     )}
                   </div>
-                )
-              })}
-          </div>
-        ))}
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
 
       {editing && (
