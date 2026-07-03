@@ -14,7 +14,7 @@ const WRITE_ACCESS_EXPLANATION: Record<PageKey, string> = {
   tournaments: 'Å opprette, redigere resultater i, eller slette turneringer er uansett forbeholdt admin – skriv har ingen effekt her per nå.',
   ladder: 'Gir mulighet til å utfordre spilleren over deg på Stigespillet.',
   qr: 'Ingen skrivehandlinger på QR-siden – skriv gir samme tilgang som les.',
-  players: 'Gir mulighet til å legge til nye spillere (med brukernavn/passord) og sette/nullstille brukernavn og passord for eksisterende spillere.',
+  players: 'Gir mulighet til å legge til nye spillere (får automatisk generert brukernavn/passord). Å redigere, tilbakestille passord for, eller slette eksisterende spillere er uansett forbeholdt admin, uavhengig av denne rollen.',
   profile_edit: 'Gir mulighet til å endre eget navn, profilbilde og passord.',
 }
 

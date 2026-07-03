@@ -1,14 +1,21 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, X, KeyRound, Pencil, Trash2, CheckCircle2 } from 'lucide-react'
+import { Plus, X, KeyRound, Pencil, Trash2, CheckCircle2, Copy } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import type { Player } from '@/lib/types'
 
+interface NewCredentials {
+  name: string
+  username: string
+  password: string
+}
+
 export function Players() {
-  const { hasAccess } = useAuth()
+  const { player, hasAccess } = useAuth()
   const canWrite = hasAccess('players', 'write')
+  const isAdmin = !!player?.is_admin
   const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -17,6 +24,7 @@ export function Players() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
+  const [newCredentials, setNewCredentials] = useState<NewCredentials | null>(null)
 
   // Only the very first load should show the full-page "Laster..." state.
   // Refreshing after a mutation must not unmount the page (and any open
@@ -38,9 +46,14 @@ export function Players() {
 
   function handleSaved(message: string) {
     setBanner(message)
-    setShowCreate(false)
     setEditing(null)
     setEditingInfo(null)
+    load()
+  }
+
+  function handleCreated(creds: NewCredentials) {
+    setShowCreate(false)
+    setNewCredentials(creds)
     load()
   }
 
@@ -98,7 +111,7 @@ export function Players() {
                 </p>
               </div>
             </Link>
-            {canWrite && (
+            {isAdmin && (
               <div className="flex items-center gap-1 shrink-0">
                 <button onClick={() => setEditingInfo(p)} className="btn-ghost p-2" title="Rediger navn/bilde">
                   <Pencil size={16} />
@@ -120,9 +133,8 @@ export function Players() {
         ))}
       </div>
 
-      {showCreate && (
-        <CreatePlayerModal onClose={() => setShowCreate(false)} onSaved={(name) => handleSaved(`${name} er lagt til`)} />
-      )}
+      {showCreate && <CreatePlayerModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />}
+      {newCredentials && <NewCredentialsModal creds={newCredentials} onClose={() => setNewCredentials(null)} />}
       {editing && (
         <EditCredentialsModal player={editing} onClose={() => setEditing(null)} onSaved={handleSaved} />
       )}
@@ -187,10 +199,9 @@ function EditInfoModal({ player, onClose, onSaved }: { player: Player; onClose: 
   )
 }
 
-function CreatePlayerModal({ onClose, onSaved }: { onClose: () => void; onSaved: (name: string) => void }) {
+function CreatePlayerModal({ onClose, onCreated }: { onClose: () => void; onCreated: (creds: NewCredentials) => void }) {
   const [name, setName] = useState('')
   const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -198,14 +209,14 @@ function CreatePlayerModal({ onClose, onSaved }: { onClose: () => void; onSaved:
     setError(null)
     setSaving(true)
     const { data, error } = await supabase.functions.invoke('manage-player', {
-      body: { action: 'create', name, username, password },
+      body: { action: 'create', name, username },
     })
     setSaving(false)
     if (error || data?.error) {
       setError(data?.error ?? error?.message ?? 'Kunne ikke opprette spiller')
       return
     }
-    onSaved(name)
+    onCreated({ name, username: data.username, password: data.password })
   }
 
   return (
@@ -232,23 +243,59 @@ function CreatePlayerModal({ onClose, onSaved }: { onClose: () => void; onSaved:
               autoCapitalize="off"
             />
           </div>
-          <div>
-            <label className="text-sm font-medium mb-1 block">Passord</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="input"
-              placeholder="Minst 8 tegn"
-            />
-          </div>
           {error && <p className="text-sm text-rose-600">{error}</p>}
           <button onClick={handleCreate} disabled={saving} className="btn-primary">
             {saving ? 'Oppretter...' : 'Opprett spiller'}
           </button>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Gi brukernavnet og passordet videre til spilleren slik at de kan logge inn.
+            Et midlertidig passord blir generert automatisk – du får se det med en gang spilleren er opprettet.
           </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NewCredentialsModal({ creds, onClose }: { creds: NewCredentials; onClose: () => void }) {
+  const [copied, setCopied] = useState(false)
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(`Brukernavn: ${creds.username}\nPassord: ${creds.password}`)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard API unavailable — user can still select the text manually
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+      <div className="card w-full max-w-sm p-6 animate-pop-in" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 mb-1">
+          <CheckCircle2 size={20} className="text-emerald-500" />
+          <h2 className="text-lg font-bold">{creds.name} er lagt til</h2>
+        </div>
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+          Gi disse påloggingsdetaljene videre til spilleren. De vises kun denne ene gangen.
+        </p>
+        <div className="card bg-slate-50 dark:bg-slate-800/50 p-4 flex flex-col gap-2 font-mono text-sm">
+          <div className="flex justify-between gap-2">
+            <span className="text-slate-500 dark:text-slate-400">Brukernavn</span>
+            <span className="font-semibold">{creds.username}</span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-slate-500 dark:text-slate-400">Passord</span>
+            <span className="font-semibold">{creds.password}</span>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-4">
+          <button onClick={handleCopy} className="btn-secondary flex-1 text-sm">
+            <Copy size={16} /> {copied ? 'Kopiert!' : 'Kopier'}
+          </button>
+          <button onClick={onClose} className="btn-primary flex-1 text-sm">
+            Jeg har notert dette
+          </button>
         </div>
       </div>
     </div>
