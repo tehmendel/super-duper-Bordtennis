@@ -162,6 +162,21 @@ export function Dashboard() {
     }
   }, [load])
 
+  // Also refetch live via Realtime — the focus/visibility listeners above
+  // don't fire when someone else confirms a match while this tab stays
+  // open and focused the whole time.
+  useEffect(() => {
+    if (!player) return
+    const channel = supabase
+      .channel(`dashboard-matches-${player.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `player1_id=eq.${player.id}` }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `player2_id=eq.${player.id}` }, () => load())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [player, load])
+
   if (!player) return null
 
   function renderCard(id: string) {
