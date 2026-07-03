@@ -192,6 +192,14 @@ export interface TournamentMatch {
   is_lucky_loser: boolean
 }
 
+export interface TournamentMatchSet {
+  id: string
+  tournament_match_id: string
+  set_number: number
+  player1_score: number
+  player2_score: number
+}
+
 export interface LeaderboardRow {
   id: string
   name: string

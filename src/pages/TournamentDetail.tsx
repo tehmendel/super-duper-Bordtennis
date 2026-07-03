@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, X, Trash2, Dices } from 'lucide-react'
+import { Trophy, X, Trash2, Dices, Plus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { TournamentMatchDetailModal } from '@/components/TournamentMatchDetailModal'
 import { eloWinProbability } from '@/lib/stats'
-import type { Player, Tournament, TournamentMatch, TournamentParticipant } from '@/lib/types'
+import type { Player, Tournament, TournamentMatch, TournamentMatchSet, TournamentParticipant } from '@/lib/types'
 
 interface EnrichedMatch extends TournamentMatch {
   player1: Player | null
   player2: Player | null
 }
+
+type SetScore = { player1_score: string; player2_score: string }
 
 function chunkPairs<T>(arr: T[]): T[][] {
   const out: T[][] = []
@@ -36,11 +39,12 @@ export function TournamentDetail() {
   const { player } = useAuth()
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
+  const [matchSets, setMatchSets] = useState<TournamentMatchSet[]>([])
   const [participants, setParticipants] = useState<TournamentParticipant[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<EnrichedMatch | null>(null)
-  const [score1, setScore1] = useState('')
-  const [score2, setScore2] = useState('')
+  const [sets, setSets] = useState<SetScore[]>([{ player1_score: '', player2_score: '' }])
+  const [viewing, setViewing] = useState<EnrichedMatch | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,6 +65,18 @@ export function TournamentDetail() {
     setTournament(t ?? null)
     setMatches(m ?? [])
     setParticipants(p ?? [])
+
+    const matchIds = (m ?? []).map((match) => match.id)
+    if (matchIds.length > 0) {
+      const { data: s } = await supabase
+        .from('tournament_match_sets')
+        .select('*')
+        .in('tournament_match_id', matchIds)
+        .order('set_number')
+        .returns<TournamentMatchSet[]>()
+      setMatchSets(s ?? [])
+    }
+
     setLoading(false)
   }, [id])
 
@@ -81,25 +97,38 @@ export function TournamentDetail() {
 
   function openEdit(m: EnrichedMatch) {
     setEditing(m)
-    setScore1(m.player1_score !== null ? String(m.player1_score) : '')
-    setScore2(m.player2_score !== null ? String(m.player2_score) : '')
+    const existing = matchSets.filter((s) => s.tournament_match_id === m.id)
+    setSets(
+      existing.length > 0
+        ? existing.map((s) => ({ player1_score: String(s.player1_score), player2_score: String(s.player2_score) }))
+        : [{ player1_score: '', player2_score: '' }, { player1_score: '', player2_score: '' }],
+    )
     setError(null)
+  }
+
+  function updateSet(index: number, field: keyof SetScore, value: string) {
+    setSets((prev) => prev.map((s, i) => (i === index ? { ...s, [field]: value } : s)))
   }
 
   async function handleSave() {
     if (!editing) return
     setError(null)
-    const p1 = Number(score1)
-    const p2 = Number(score2)
-    if (score1 === '' || score2 === '' || p1 === p2) {
-      setError('Fyll inn to ulike tall')
-      return
-    }
+
+    const parsedSets = sets
+      .filter((s) => s.player1_score !== '' && s.player2_score !== '')
+      .map((s, i) => ({
+        set_number: i + 1,
+        player1_score: Number(s.player1_score),
+        player2_score: Number(s.player2_score),
+      }))
+
+    if (parsedSets.length === 0) return setError('Fyll inn minst ett sett')
+    if (parsedSets.some((s) => s.player1_score === s.player2_score)) return setError('Et sett kan ikke ende uavgjort')
+
     setSaving(true)
     const { error } = await supabase.rpc('submit_tournament_match_result', {
       p_match_id: editing.id,
-      p_player1_score: p1,
-      p_player2_score: p2,
+      p_sets: parsedSets,
     })
     setSaving(false)
     if (error) {
@@ -159,10 +188,15 @@ export function TournamentDetail() {
                   <div key={pairIdx} className="relative flex flex-col justify-between gap-6">
                     {pair.map((m) => {
                       const canEdit = player?.is_admin && m.player1_id && m.player2_id && m.player1_score === null
+                      const isDecided = m.winner_id !== null
                       const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
                       const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null
                       return (
-                        <div key={m.id} className="card p-3 flex flex-col gap-2 min-h-[92px]">
+                        <div
+                          key={m.id}
+                          onClick={() => isDecided && setViewing(m)}
+                          className={`card p-3 flex flex-col gap-2 min-h-[92px] ${isDecided ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''}`}
+                        >
                           {m.is_lucky_loser && (
                             <span className="inline-flex items-center gap-1 self-start text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
                               <Dices size={10} /> Lucky loser
@@ -192,7 +226,13 @@ export function TournamentDetail() {
                             )
                           })}
                           {canEdit && (
-                            <button onClick={() => openEdit(m)} className="btn-secondary text-xs py-1.5">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openEdit(m)
+                              }}
+                              className="btn-secondary text-xs py-1.5"
+                            >
                               Registrer resultat
                             </button>
                           )}
@@ -212,21 +252,52 @@ export function TournamentDetail() {
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setEditing(null)}>
-          <div className="card w-full max-w-xs p-6 animate-pop-in" onClick={(e) => e.stopPropagation()}>
+          <div className="card w-full max-w-sm p-6 animate-pop-in max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-bold">Registrer resultat</h2>
               <button onClick={() => setEditing(null)} className="btn-ghost p-1.5">
                 <X size={18} />
               </button>
             </div>
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-2">
-                <span className="flex-1 text-sm truncate">{editing.player1?.name}</span>
-                <input type="number" value={score1} onChange={(e) => setScore1(e.target.value)} className="input w-20 text-center" />
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="flex-1 text-sm truncate">{editing.player2?.name}</span>
-                <input type="number" value={score2} onChange={(e) => setScore2(e.target.value)} className="input w-20 text-center" />
+            <div className="flex flex-col gap-4">
+              <label className="text-sm font-medium mb-1 block -mb-2">
+                Settscore ({editing.player1?.name} vs. {editing.player2?.name})
+              </label>
+              <div className="flex flex-col gap-2">
+                {sets.map((s, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="w-14 text-sm text-slate-500">Sett {i + 1}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={s.player1_score}
+                      onChange={(e) => updateSet(i, 'player1_score', e.target.value)}
+                      className="input text-center"
+                      placeholder={editing.player1?.name}
+                    />
+                    <span className="text-slate-400">–</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={s.player2_score}
+                      onChange={(e) => updateSet(i, 'player2_score', e.target.value)}
+                      className="input text-center"
+                      placeholder={editing.player2?.name}
+                    />
+                    {sets.length > 1 && (
+                      <button type="button" onClick={() => setSets((prev) => prev.filter((_, idx) => idx !== i))} className="btn-ghost p-2 text-rose-500">
+                        <X size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setSets((prev) => [...prev, { player1_score: '', player2_score: '' }])}
+                  className="btn-secondary self-start"
+                >
+                  <Plus size={16} /> Legg til sett
+                </button>
               </div>
               {error && <p className="text-sm text-rose-600">{error}</p>}
               <button onClick={handleSave} disabled={saving} className="btn-primary">
@@ -236,6 +307,13 @@ export function TournamentDetail() {
           </div>
         </div>
       )}
+
+      <TournamentMatchDetailModal
+        match={viewing}
+        sets={viewing ? matchSets.filter((s) => s.tournament_match_id === viewing.id) : []}
+        roundLabel={viewing ? roundName(viewing.round, rounds.length) : ''}
+        onClose={() => setViewing(null)}
+      />
     </div>
   )
 }
