@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function InvitePlayer() {
+  const { hasAccess } = useAuth()
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -18,6 +20,10 @@ export function InvitePlayer() {
     }
     setStatus('sent')
     setEmail('')
+  }
+
+  if (!hasAccess('invite', 'write')) {
+    return <p className="text-slate-500 dark:text-slate-400">Du har kun lesetilgang og kan ikke sende invitasjoner.</p>
   }
 
   return (

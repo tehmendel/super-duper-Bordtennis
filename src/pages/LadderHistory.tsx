@@ -17,7 +17,7 @@ interface LogRow extends LadderChallengeLog {
 }
 
 export function LadderHistory() {
-  const { player } = useAuth()
+  const { player, hasAccess } = useAuth()
   const ladderEnabled = useLadderEnabled()
   const [rows, setRows] = useState<PositionRow[]>([])
   const [logs, setLogs] = useState<LogRow[]>([])
@@ -95,9 +95,13 @@ export function LadderHistory() {
                 </p>
                 {challengeSent && <p className="text-xs text-emerald-600 mt-1">Utfordring sendt! 🎉</p>}
               </div>
-              <button onClick={handleChallenge} disabled={challenging} className="btn-primary text-sm py-2 px-3 shrink-0">
-                {challenging ? 'Sender...' : 'Utfordre'}
-              </button>
+              {hasAccess('ladder', 'write') ? (
+                <button onClick={handleChallenge} disabled={challenging} className="btn-primary text-sm py-2 px-3 shrink-0">
+                  {challenging ? 'Sender...' : 'Utfordre'}
+                </button>
+              ) : (
+                <span className="text-xs text-slate-400 italic shrink-0">Kun lesetilgang</span>
+              )}
             </div>
           )}
 

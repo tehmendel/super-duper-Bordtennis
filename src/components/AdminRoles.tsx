@@ -2,7 +2,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { Plus, Trash2, Star } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
-import { PAGE_KEYS, PAGE_LABELS, type AccessLevel, type Player, type Role, type RoleAssignment, type RolePermission } from '@/lib/types'
+import { PAGE_KEYS, PAGE_LABELS, type AccessLevel, type PageKey, type Player, type Role, type RoleAssignment, type RolePermission } from '@/lib/types'
+
+const WRITE_ACCESS_EXPLANATION: Record<PageKey, string> = {
+  dashboard: 'Ingen skrivehandlinger på Dashboard i dag – skriv gir samme tilgang som les.',
+  new_match: 'Gir mulighet til å registrere nye kamper.',
+  pending: 'Gir mulighet til å bekrefte eller avvise kamper som venter på bekreftelse.',
+  history: 'Ingen skrivehandlinger på selve siden – skriv gir samme tilgang som les.',
+  leaderboard: 'Ingen skrivehandlinger på Toppliste – skriv gir samme tilgang som les.',
+  head_to_head: 'Ingen skrivehandlinger på Head-to-head – skriv gir samme tilgang som les.',
+  tournaments: 'Å opprette, redigere resultater i, eller slette turneringer er uansett forbeholdt admin – skriv har ingen effekt her per nå.',
+  ladder: 'Gir mulighet til å utfordre spilleren over deg på Stigespillet.',
+  qr: 'Ingen skrivehandlinger på QR-siden – skriv gir samme tilgang som les.',
+  invite: 'Gir mulighet til å sende invitasjon til nye spillere.',
+  profile_edit: 'Gir mulighet til å endre eget navn, profilbilde og e-postadresse.',
+}
 
 export function AdminRoles() {
   const [roles, setRoles] = useState<Role[]>([])
@@ -139,7 +153,9 @@ export function AdminRoles() {
                   <tr className="border-b border-slate-200 dark:border-slate-800">
                     <th className="text-left font-medium p-3">Side</th>
                     <th className="p-3 text-center font-medium">Les</th>
-                    <th className="p-3 text-center font-medium">Les + skriv</th>
+                    <th className="p-3 text-center font-medium" title="Hold musepekeren over en avkrysningsboks i denne kolonnen for å se hva skrivetilgang faktisk gir på den siden.">
+                      Les + skriv
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -156,7 +172,7 @@ export function AdminRoles() {
                             className="w-4 h-4"
                           />
                         </td>
-                        <td className="p-3 text-center">
+                        <td className="p-3 text-center" title={WRITE_ACCESS_EXPLANATION[key]}>
                           <input
                             type="checkbox"
                             checked={perm?.access_level === 'write'}

@@ -7,7 +7,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { pushSupported, getExistingSubscription, enablePushNotifications, disablePushNotifications } from '@/lib/push'
 
 export function EditProfile() {
-  const { player, session, refreshPlayer } = useAuth()
+  const { player, session, refreshPlayer, hasAccess } = useAuth()
   const navigate = useNavigate()
   const [name, setName] = useState(player?.name ?? '')
   const avatarUrl = player?.avatar_url ?? null
@@ -108,55 +108,68 @@ export function EditProfile() {
     navigate(`/players/${player!.id}`)
   }
 
+  const canEdit = hasAccess('profile_edit', 'write')
+
   return (
     <div className="flex flex-col gap-6 max-w-sm">
       <h1 className="text-2xl font-bold">Rediger profil</h1>
 
-      <form onSubmit={handleSubmit} className="card p-5 flex flex-col gap-4">
-        <div className="flex flex-col items-center gap-3">
-          {preview || avatarUrl ? (
-            <img src={preview ?? avatarUrl ?? ''} alt={name} className="w-24 h-24 rounded-full object-cover" />
-          ) : (
-            <PlayerAvatar name={name || player.name} avatarUrl={null} size="lg" />
-          )}
-          <label className="btn-secondary cursor-pointer text-sm">
-            Velg bilde
-            <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
-          </label>
+      {canEdit ? (
+        <>
+          <form onSubmit={handleSubmit} className="card p-5 flex flex-col gap-4">
+            <div className="flex flex-col items-center gap-3">
+              {preview || avatarUrl ? (
+                <img src={preview ?? avatarUrl ?? ''} alt={name} className="w-24 h-24 rounded-full object-cover" />
+              ) : (
+                <PlayerAvatar name={name || player.name} avatarUrl={null} size="lg" />
+              )}
+              <label className="btn-secondary cursor-pointer text-sm">
+                Velg bilde
+                <input type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
+              </label>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1 block">Navn</label>
+              <input required value={name} onChange={(e) => setName(e.target.value)} className="input" />
+            </div>
+
+            {error && <p className="text-sm text-rose-600">{error}</p>}
+
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? 'Lagrer...' : 'Lagre endringer'}
+            </button>
+          </form>
+
+          <form onSubmit={handleEmailChange} className="card p-5 flex flex-col gap-3">
+            <p className="text-sm font-semibold">E-postadresse</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Nåværende: <strong>{session.user.email}</strong>. Du får en bekreftelseslenke på den nye adressen (og
+              eventuelt den gamle) før endringen trer i kraft.
+            </p>
+            <input
+              type="email"
+              required
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="ny@epost.no"
+              className="input"
+            />
+            {emailError && <p className="text-sm text-rose-600">{emailError}</p>}
+            {emailSent && <p className="text-sm text-emerald-600">Sjekk innboksen din for å bekrefte den nye adressen.</p>}
+            <button type="submit" disabled={emailBusy} className="btn-secondary self-start">
+              {emailBusy ? 'Sender...' : 'Oppdater e-post'}
+            </button>
+          </form>
+        </>
+      ) : (
+        <div className="card p-5 flex items-center gap-3">
+          <PlayerAvatar name={player.name} avatarUrl={player.avatar_url} />
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Du har kun lesetilgang og kan ikke endre navn, bilde eller e-post.
+          </p>
         </div>
-
-        <div>
-          <label className="text-sm font-medium mb-1 block">Navn</label>
-          <input required value={name} onChange={(e) => setName(e.target.value)} className="input" />
-        </div>
-
-        {error && <p className="text-sm text-rose-600">{error}</p>}
-
-        <button type="submit" disabled={saving} className="btn-primary">
-          {saving ? 'Lagrer...' : 'Lagre endringer'}
-        </button>
-      </form>
-
-      <form onSubmit={handleEmailChange} className="card p-5 flex flex-col gap-3">
-        <p className="text-sm font-semibold">E-postadresse</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">
-          Nåværende: <strong>{session.user.email}</strong>. Du får en bekreftelseslenke på den nye adressen (og
-          eventuelt den gamle) før endringen trer i kraft.
-        </p>
-        <input
-          type="email"
-          required
-          value={newEmail}
-          onChange={(e) => setNewEmail(e.target.value)}
-          placeholder="ny@epost.no"
-          className="input"
-        />
-        {emailError && <p className="text-sm text-rose-600">{emailError}</p>}
-        {emailSent && <p className="text-sm text-emerald-600">Sjekk innboksen din for å bekrefte den nye adressen.</p>}
-        <button type="submit" disabled={emailBusy} className="btn-secondary self-start">
-          {emailBusy ? 'Sender...' : 'Oppdater e-post'}
-        </button>
-      </form>
+      )}
 
       {pushSupported() && (
         <div className="card p-5 flex flex-col gap-2">

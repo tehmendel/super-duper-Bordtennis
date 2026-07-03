@@ -10,7 +10,7 @@ type SetScore = { player1_score: string; player2_score: string }
 const BEST_OF_OPTIONS = [1, 3, 5] as const
 
 export function NewMatch() {
-  const { player } = useAuth()
+  const { player, hasAccess } = useAuth()
   const navigate = useNavigate()
   const [players, setPlayers] = useState<Player[]>([])
   const [opponentId, setOpponentId] = useState('')
@@ -72,6 +72,10 @@ export function NewMatch() {
   }
 
   const opponent = players.find((p) => p.id === opponentId)
+
+  if (!hasAccess('new_match', 'write')) {
+    return <p className="text-slate-500 dark:text-slate-400">Du har kun lesetilgang og kan ikke registrere kamper.</p>
+  }
 
   return (
     <div className="flex flex-col gap-6 max-w-lg">

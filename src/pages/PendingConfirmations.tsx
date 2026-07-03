@@ -12,7 +12,7 @@ interface EnrichedMatch extends Match {
 }
 
 export function PendingConfirmations() {
-  const { player } = useAuth()
+  const { player, hasAccess } = useAuth()
   const [awaitingMe, setAwaitingMe] = useState<EnrichedMatch[]>([])
   const [awaitingOthers, setAwaitingOthers] = useState<EnrichedMatch[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,22 +86,26 @@ export function PendingConfirmations() {
                   <span className="font-medium">{m.player2.name}</span>
                   <PlayerAvatar name={m.player2.name} avatarUrl={m.player2.avatar_url} size="sm" />
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    disabled={busyId === m.id}
-                    onClick={() => respond(m.id, 'confirmed')}
-                    className="btn-primary py-2 px-3 bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    <Check size={16} /> Bekreft
-                  </button>
-                  <button
-                    disabled={busyId === m.id}
-                    onClick={() => respond(m.id, 'rejected')}
-                    className="btn-secondary py-2 px-3 text-rose-600"
-                  >
-                    <X size={16} /> Avvis
-                  </button>
-                </div>
+                {hasAccess('pending', 'write') ? (
+                  <div className="flex gap-2">
+                    <button
+                      disabled={busyId === m.id}
+                      onClick={() => respond(m.id, 'confirmed')}
+                      className="btn-primary py-2 px-3 bg-emerald-600 hover:bg-emerald-700"
+                    >
+                      <Check size={16} /> Bekreft
+                    </button>
+                    <button
+                      disabled={busyId === m.id}
+                      onClick={() => respond(m.id, 'rejected')}
+                      className="btn-secondary py-2 px-3 text-rose-600"
+                    >
+                      <X size={16} /> Avvis
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 italic">Du har kun lesetilgang</p>
+                )}
               </div>
             ))}
           </div>
