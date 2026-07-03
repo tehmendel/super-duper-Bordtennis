@@ -247,6 +247,37 @@ export function PlayerProfile() {
       <div className="card p-4">
         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Siste kamper</p>
         <FormPills results={form} />
+        <div className="flex flex-col gap-1 mt-3">
+          {matches.slice(0, 5).map((m) => {
+            const won = m.winner_id === id
+            const opponentId = m.player1_id === id ? m.player2_id : m.player1_id
+            const opponent = players.find((p) => p.id === opponentId)
+            const myScore = m.player1_id === id ? m.sets_won_player1 : m.sets_won_player2
+            const oppScore = m.player1_id === id ? m.sets_won_player2 : m.sets_won_player1
+            return (
+              <button
+                key={m.id}
+                onClick={() => setSelectedMatchId(m.id)}
+                className="flex items-center gap-3 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg p-2 -mx-2"
+              >
+                {opponent && <PlayerAvatar name={opponent.name} avatarUrl={opponent.avatar_url} size="sm" />}
+                <span className="flex-1 truncate">
+                  mot <span className="font-medium">{opponent?.name ?? 'Ukjent spiller'}</span>
+                </span>
+                <span className="font-mono text-slate-400">{myScore}–{oppScore}</span>
+                <span
+                  className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                    won
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                      : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
+                  }`}
+                >
+                  {won ? 'Seier' : 'Tap'}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {chartData.length > 1 && (
