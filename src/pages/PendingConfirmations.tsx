@@ -16,6 +16,7 @@ export function PendingConfirmations() {
   const { player, hasAccess } = useAuth()
   const [awaitingMe, setAwaitingMe] = useState<EnrichedMatch[]>([])
   const [awaitingOthers, setAwaitingOthers] = useState<EnrichedMatch[]>([])
+  const [recentConfirmed, setRecentConfirmed] = useState<EnrichedMatch[]>([])
   const [setsByMatch, setSetsByMatch] = useState<Record<string, MatchSet[]>>({})
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
@@ -25,13 +26,25 @@ export function PendingConfirmations() {
   const load = useCallback(async () => {
     if (!player) return
     setLoading(true)
-    const { data } = await supabase
-      .from('matches')
-      .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)')
-      .eq('status', 'pending')
-      .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
-      .order('created_at', { ascending: false })
-      .returns<EnrichedMatch[]>()
+    const [{ data }, { data: confirmed }] = await Promise.all([
+      supabase
+        .from('matches')
+        .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)')
+        .eq('status', 'pending')
+        .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
+        .order('created_at', { ascending: false })
+        .returns<EnrichedMatch[]>(),
+      supabase
+        .from('matches')
+        .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)')
+        .eq('status', 'confirmed')
+        .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
+        .order('confirmed_at', { ascending: false })
+        .limit(10)
+        .returns<EnrichedMatch[]>(),
+    ])
+
+    setRecentConfirmed(confirmed ?? [])
 
     if (data) {
       setAwaitingMe(data.filter((m) => m.submitted_by !== player.id))
@@ -160,6 +173,48 @@ export function PendingConfirmations() {
                 <span className="font-mono">{setsWon1}–{setsWon2}</span>
                 <span className="ml-auto italic">Venter...</span>
               </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Nylig bekreftet</h2>
+        {recentConfirmed.length === 0 ? (
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Ingen bekreftede kamper ennå.</p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {recentConfirmed.map((m) => {
+              const isP1 = m.player1_id === player!.id
+              const opponent = isP1 ? m.player2 : m.player1
+              const myScore = isP1 ? m.sets_won_player1 : m.sets_won_player2
+              const oppScore = isP1 ? m.sets_won_player2 : m.sets_won_player1
+              const won = m.winner_id === player!.id
+              return (
+                <div
+                  key={m.id}
+                  onClick={() => setViewingMatchId(m.id)}
+                  className="card p-3 flex items-center gap-3 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                >
+                  <PlayerAvatar name={opponent.name} avatarUrl={opponent.avatar_url} size="sm" />
+                  <span className="flex-1 truncate">
+                    mot <span className="font-medium">{opponent.name}</span>
+                  </span>
+                  <span className="font-mono text-slate-400">{myScore}–{oppScore}</span>
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
+                      won
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
+                    }`}
+                  >
+                    {won ? 'Seier' : 'Tap'}
+                  </span>
+                  <span className="text-slate-400 text-xs shrink-0">
+                    {new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO')}
+                  </span>
+                </div>
               )
             })}
           </div>
