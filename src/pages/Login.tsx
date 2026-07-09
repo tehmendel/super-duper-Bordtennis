@@ -12,17 +12,33 @@ export function Login() {
     setLoading(true)
     setError(null)
 
+    const trimmedUsername = username.trim()
+
     const { data: email, error: resolveError } = await supabase.rpc('resolve_username_to_email', {
-      p_username: username.trim(),
+      p_username: trimmedUsername,
     })
 
-    if (resolveError || !email) {
+    if (resolveError) {
+      setLoading(false)
+      // Locked out — don't record another attempt here, or the rolling
+      // 15-minute window would keep pushing itself forward on every retry.
+      setError(
+        resolveError.message.includes('mange mislykkede')
+          ? resolveError.message
+          : 'Feil brukernavn eller passord',
+      )
+      return
+    }
+
+    if (!email) {
+      await supabase.rpc('record_login_attempt', { p_username: trimmedUsername, p_success: false })
       setLoading(false)
       setError('Feil brukernavn eller passord')
       return
     }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    await supabase.rpc('record_login_attempt', { p_username: trimmedUsername, p_success: !signInError })
     setLoading(false)
     if (signInError) setError('Feil brukernavn eller passord')
   }
