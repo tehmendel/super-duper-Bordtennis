@@ -52,7 +52,12 @@ export default function App() {
         <Route path="/qr" element={<RequireAccess page="qr"><QrCodePage /></RequireAccess>} />
         <Route path="/more" element={<MorePage />} />
         <Route path="/profile/edit" element={<RequireAccess page="profile_edit"><EditProfile /></RequireAccess>} />
-        <Route path="/admin" element={<Admin />} />
+        <Route
+          path="/admin"
+          element={
+            player.is_admin ? <Admin /> : <p className="text-slate-500 dark:text-slate-400">Du har ikke tilgang til denne siden.</p>
+          }
+        />
         <Route path="/tournaments" element={<RequireAccess page="tournaments"><Tournaments /></RequireAccess>} />
         <Route path="/tournaments/new" element={<RequireAccess page="tournaments"><NewTournament /></RequireAccess>} />
         <Route path="/tournaments/:id" element={<RequireAccess page="tournaments"><TournamentDetail /></RequireAccess>} />
