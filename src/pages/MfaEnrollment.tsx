@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
 import { ShieldCheck, Copy, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -6,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 export function MfaEnrollment() {
   const { refreshMfaStatus, signOut } = useAuth()
   const [factorId, setFactorId] = useState<string | null>(null)
-  const [qrCode, setQrCode] = useState<string | null>(null)
+  const [otpUri, setOtpUri] = useState<string | null>(null)
   const [secret, setSecret] = useState<string | null>(null)
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -33,10 +34,10 @@ export function MfaEnrollment() {
         return
       }
       setFactorId(data.id)
-      // GoTrue returns raw SVG markup here, not a data URI or a rendered
-      // PNG — wrap it so it works as a plain <img src>, avoiding the need
-      // for dangerouslySetInnerHTML.
-      setQrCode(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(data.totp.qr_code)}`)
+      // GoTrue's own pre-rendered qr_code SVG is ~360KB (thousands of individual
+      // <rect> elements) — render the otpauth:// URI ourselves instead with the
+      // same lightweight QRCodeSVG already used on the QR page.
+      setOtpUri(data.totp.uri)
       setSecret(data.totp.secret)
       setLoading(false)
     }
@@ -91,10 +92,10 @@ export function MfaEnrollment() {
 
         {loading ? (
           <p className="text-slate-500">Laster...</p>
-        ) : qrCode ? (
+        ) : otpUri ? (
           <div className="flex flex-col gap-4">
             <div className="bg-white p-3 rounded-xl mx-auto w-fit">
-              <img src={qrCode} alt="QR-kode for autentiseringsapp" className="w-40 h-40" />
+              <QRCodeSVG value={otpUri} size={160} />
             </div>
 
             {secret && (
