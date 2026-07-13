@@ -128,6 +128,31 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ success: true });
   }
 
+  if (body.action === "reset_mfa") {
+    const playerId = typeof body.playerId === "string" ? body.playerId : "";
+    if (!playerId) return jsonResponse({ error: "Mangler spiller-id" }, 400);
+
+    const { data: player } = await admin.from("players").select("auth_user_id").eq("id", playerId).maybeSingle();
+    if (!player?.auth_user_id) {
+      return jsonResponse({ error: "Denne spilleren har ingen konto" }, 400);
+    }
+
+    const { data: userData, error: getUserError } = await admin.auth.admin.getUserById(player.auth_user_id);
+    if (getUserError || !userData.user) {
+      return jsonResponse({ error: getUserError?.message ?? "Fant ikke brukeren" }, 400);
+    }
+
+    for (const factor of userData.user.factors ?? []) {
+      const { error: deleteError } = await admin.auth.admin.mfa.deleteFactor({
+        id: factor.id,
+        userId: player.auth_user_id,
+      });
+      if (deleteError) return jsonResponse({ error: deleteError.message }, 400);
+    }
+
+    return jsonResponse({ success: true });
+  }
+
   if (body.action === "delete") {
     const playerId = typeof body.playerId === "string" ? body.playerId : "";
     if (!playerId) return jsonResponse({ error: "Mangler spiller-id" }, 400);

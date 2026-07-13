@@ -3,6 +3,8 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { AccessLevel, Player, PageKey } from '@/lib/types'
 
+export type MfaStatus = 'unenrolled' | 'unverified' | 'verified' | null
+
 interface AuthContextValue {
   session: Session | null
   player: Player | null
@@ -11,6 +13,8 @@ interface AuthContextValue {
   hasAccess: (page: PageKey, level?: AccessLevel) => boolean
   refreshPlayer: () => Promise<void>
   signOut: () => Promise<void>
+  mfaStatus: MfaStatus
+  refreshMfaStatus: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -19,7 +23,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [player, setPlayer] = useState<Player | null>(null)
   const [permissions, setPermissions] = useState<Partial<Record<PageKey, AccessLevel>>>({})
+  const [mfaStatus, setMfaStatus] = useState<MfaStatus>(null)
   const [loading, setLoading] = useState(true)
+
+  // 'unenrolled' = no TOTP factor at all yet (must set one up now).
+  // 'unverified' = has a factor, but this session hasn't completed the code
+  //   challenge yet (aal1 -> aal2 required).
+  // 'verified' = fully authenticated this session (aal2).
+  const refreshMfaStatus = useCallback(async () => {
+    const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+    if (error || !data) {
+      setMfaStatus(null)
+      return
+    }
+    if (data.nextLevel !== 'aal2') setMfaStatus('unenrolled')
+    else if (data.currentLevel === 'aal2') setMfaStatus('verified')
+    else setMfaStatus('unverified')
+  }, [])
 
   const loadPlayer = useCallback(async (userId: string) => {
     const { data } = await supabase.from('players').select('*').eq('auth_user_id', userId).maybeSingle()
@@ -66,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       if (session) {
+        await refreshMfaStatus()
         const p = await loadPlayer(session.user.id)
         await loadPermissions(p)
       }
@@ -75,16 +96,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
       if (session) {
+        await refreshMfaStatus()
         const p = await loadPlayer(session.user.id)
         await loadPermissions(p)
       } else {
         setPlayer(null)
         setPermissions({})
+        setMfaStatus(null)
       }
     })
 
     return () => listener.subscription.unsubscribe()
-  }, [loadPlayer, loadPermissions])
+  }, [loadPlayer, loadPermissions, refreshMfaStatus])
 
   const refreshPlayer = useCallback(async () => {
     if (session) {
@@ -108,7 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   return (
-    <AuthContext.Provider value={{ session, player, loading, permissions, hasAccess, refreshPlayer, signOut }}>
+    <AuthContext.Provider
+      value={{ session, player, loading, permissions, hasAccess, refreshPlayer, signOut, mfaStatus, refreshMfaStatus }}
+    >
       {children}
     </AuthContext.Provider>
   )

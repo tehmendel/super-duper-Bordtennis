@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, X, KeyRound, Pencil, Trash2, CheckCircle2, Copy } from 'lucide-react'
+import { Plus, X, KeyRound, Pencil, Trash2, CheckCircle2, Copy, ShieldOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -23,6 +23,7 @@ export function Players() {
   const [editingInfo, setEditingInfo] = useState<Player | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [resettingMfaId, setResettingMfaId] = useState<string | null>(null)
   const [banner, setBanner] = useState<string | null>(null)
   const [newCredentials, setNewCredentials] = useState<NewCredentials | null>(null)
 
@@ -75,6 +76,23 @@ export function Players() {
     await load()
   }
 
+  async function handleResetMfa(p: Player) {
+    if (!confirm(`Nullstille topartsinnlogging for ${p.name}? Spilleren må sette opp en ny autentiseringsapp neste gang de logger inn.`)) {
+      return
+    }
+    setDeleteError(null)
+    setResettingMfaId(p.id)
+    const { data, error } = await supabase.functions.invoke('manage-player', {
+      body: { action: 'reset_mfa', playerId: p.id },
+    })
+    setResettingMfaId(null)
+    if (error || data?.error) {
+      setDeleteError(data?.error ?? error?.message ?? 'Kunne ikke nullstille topartsinnlogging')
+      return
+    }
+    setBanner(`Topartsinnlogging for ${p.name} er nullstilt`)
+  }
+
   if (loading) return <p className="text-slate-500">Laster...</p>
 
   return (
@@ -118,6 +136,14 @@ export function Players() {
                 </button>
                 <button onClick={() => setEditing(p)} className="btn-ghost p-2" title="Rediger påloggingsdetaljer">
                   <KeyRound size={16} />
+                </button>
+                <button
+                  onClick={() => handleResetMfa(p)}
+                  disabled={resettingMfaId === p.id}
+                  className="btn-ghost p-2"
+                  title="Nullstill topartsinnlogging (mistet telefon e.l.)"
+                >
+                  <ShieldOff size={16} />
                 </button>
                 <button
                   onClick={() => handleDelete(p)}

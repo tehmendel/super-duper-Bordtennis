@@ -4,6 +4,8 @@ import { useTheme } from '@/hooks/useTheme'
 import { Layout } from '@/components/Layout'
 import { RequireAccess } from '@/components/RequireAccess'
 import { Login } from '@/pages/Login'
+import { MfaEnrollment } from '@/pages/MfaEnrollment'
+import { MfaChallenge } from '@/pages/MfaChallenge'
 import { Onboarding } from '@/pages/Onboarding'
 import { Dashboard } from '@/pages/Dashboard'
 import { NewMatch } from '@/pages/NewMatch'
@@ -31,11 +33,13 @@ function FullScreenSpinner() {
 }
 
 export default function App() {
-  const { session, player, loading } = useAuth()
+  const { session, player, loading, mfaStatus } = useAuth()
   useTheme()
 
   if (loading) return <FullScreenSpinner />
   if (!session) return <Routes><Route path="*" element={<Login />} /></Routes>
+  if (mfaStatus === 'unenrolled') return <Routes><Route path="*" element={<MfaEnrollment />} /></Routes>
+  if (mfaStatus === 'unverified') return <Routes><Route path="*" element={<MfaChallenge />} /></Routes>
   if (!player) return <Routes><Route path="*" element={<Onboarding />} /></Routes>
 
   return (
