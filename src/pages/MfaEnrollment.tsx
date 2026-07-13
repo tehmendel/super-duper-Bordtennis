@@ -36,7 +36,7 @@ export function MfaEnrollment() {
       // GoTrue returns raw SVG markup here, not a data URI or a rendered
       // PNG — wrap it so it works as a plain <img src>, avoiding the need
       // for dangerouslySetInnerHTML.
-      setQrCode(`data:image/svg+xml;utf8,${encodeURIComponent(data.totp.qr_code)}`)
+      setQrCode(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(data.totp.qr_code)}`)
       setSecret(data.totp.secret)
       setLoading(false)
     }
