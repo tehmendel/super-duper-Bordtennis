@@ -278,7 +278,14 @@ export function Dashboard() {
         if (!matchOfWeek) return null
         return (
           <div key={id} className="card p-5">
-            <CardHeader layout={layout} cardId={id} />
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <CardHeader layout={layout} cardId={id} className="text-sm font-semibold text-slate-500 dark:text-slate-400" />
+              {!layout.editMode && matchOfWeek.isPreviousWeek && (
+                <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">
+                  Forrige uke
+                </span>
+              )}
+            </div>
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <PlayerAvatar name={matchOfWeek.player1.name} avatarUrl={matchOfWeek.player1.avatar_url} size="sm" />
