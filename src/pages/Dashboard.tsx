@@ -10,6 +10,7 @@ import { ChallengeFeed } from '@/components/ChallengeFeed'
 import { PlayerOfTheWeek } from '@/components/PlayerOfTheWeek'
 import { CardHeader } from '@/components/CardHeader'
 import { useCardLayout, type CardDef } from '@/hooks/useCardLayout'
+import { startOfWeek } from '@/lib/week'
 import type { LeaderboardRow, Match, Player, Season } from '@/lib/types'
 
 interface MatchOfWeek {
@@ -17,6 +18,7 @@ interface MatchOfWeek {
   player1: Player
   player2: Player
   delta: number
+  isPreviousWeek: boolean
 }
 
 const MILESTONES = [10, 25, 50, 100, 250, 500]
@@ -47,7 +49,9 @@ export function Dashboard() {
 
   const load = useCallback(async () => {
     if (!player) return
-    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    const thisWeekStart = startOfWeek()
+    const lastWeekStart = new Date(thisWeekStart)
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7)
 
     const [
       { data: board },
@@ -84,7 +88,7 @@ export function Dashboard() {
         .eq('status', 'pending')
         .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
         .neq('submitted_by', player.id),
-      supabase.from('ratings_history').select('*, match:matches(*)').gte('created_at', weekAgo),
+      supabase.from('ratings_history').select('*, match:matches(*)').gte('created_at', thisWeekStart.toISOString()),
     ])
 
     if (board) {
@@ -121,8 +125,20 @@ export function Dashboard() {
 
     setPendingCount(count ?? 0)
 
-    if (history && history.length > 0) {
-      const top = [...history].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0]
+    let weekHistory = history ?? []
+    let matchIsPreviousWeek = false
+    if (weekHistory.length === 0) {
+      const { data: lastWeekHistory } = await supabase
+        .from('ratings_history')
+        .select('*, match:matches(*)')
+        .gte('created_at', lastWeekStart.toISOString())
+        .lt('created_at', thisWeekStart.toISOString())
+      weekHistory = lastWeekHistory ?? []
+      matchIsPreviousWeek = true
+    }
+
+    if (weekHistory.length > 0) {
+      const top = [...weekHistory].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))[0]
       const match = top.match as Match
       const { data: matchPlayers } = await supabase
         .from('players')
@@ -131,7 +147,7 @@ export function Dashboard() {
       const p1 = matchPlayers?.find((p) => p.id === match.player1_id)
       const p2 = matchPlayers?.find((p) => p.id === match.player2_id)
       if (p1 && p2) {
-        setMatchOfWeek({ match, player1: p1, player2: p2, delta: top.delta })
+        setMatchOfWeek({ match, player1: p1, player2: p2, delta: top.delta, isPreviousWeek: matchIsPreviousWeek })
       }
     } else {
       setMatchOfWeek(null)
@@ -164,13 +180,13 @@ export function Dashboard() {
 
   // Also refetch live via Realtime — the focus/visibility listeners above
   // don't fire when someone else confirms a match while this tab stays
-  // open and focused the whole time.
+  // open and focused the whole time. Unfiltered, since "ukens kamp" needs
+  // to know about everyone's matches, not just the viewer's own.
   useEffect(() => {
     if (!player) return
     const channel = supabase
       .channel(`dashboard-matches-${player.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `player1_id=eq.${player.id}` }, () => load())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches', filter: `player2_id=eq.${player.id}` }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => load())
       .subscribe()
     return () => {
       supabase.removeChannel(channel)
@@ -282,7 +298,7 @@ export function Dashboard() {
             </div>
             <div className="mt-3 flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400">
               {matchOfWeek.delta > 0 ? <TrendingUp size={16} className="text-emerald-500" /> : <TrendingDown size={16} className="text-rose-500" />}
-              Størst rating-endring denne uken ({matchOfWeek.delta > 0 ? '+' : ''}{Math.round(matchOfWeek.delta)})
+              Størst rating-endring {matchOfWeek.isPreviousWeek ? 'forrige uke' : 'denne uken'} ({matchOfWeek.delta > 0 ? '+' : ''}{Math.round(matchOfWeek.delta)})
             </div>
           </div>
         )
