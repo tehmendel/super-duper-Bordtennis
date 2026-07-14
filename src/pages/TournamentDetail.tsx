@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog, Maximize2, Minimize2, Timer, Users, Calendar, Swords, Sparkles } from 'lucide-react'
+import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog, UserPlus, Maximize2, Minimize2, Timer, Users, Calendar, Swords, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -66,6 +66,7 @@ export function TournamentDetail() {
   const [dragSource, setDragSource] = useState<Slot | null>(null)
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [slotEditor, setSlotEditor] = useState<Slot | null>(null)
+  const [showAddParticipant, setShowAddParticipant] = useState(false)
   const [bracketError, setBracketError] = useState<string | null>(null)
   // Pointer-based drag (instead of native HTML5 drag-and-drop) so this also
   // works with touch on mobile, not just mouse.
@@ -154,6 +155,28 @@ export function TournamentDetail() {
   const canEditBracket = !!player?.is_admin
   const round1Matches = matches.filter((m) => m.round === 1)
   const seatedPlayerIds = new Set(round1Matches.flatMap((m) => [m.player1_id, m.player2_id]).filter((x): x is string => !!x))
+  const openRound1Slots: Slot[] = round1Matches
+    .sort((a, b) => a.position - b.position)
+    .flatMap((m) => {
+      const slots: Slot[] = []
+      if (!m.player1_id) slots.push({ matchId: m.id, slot: 1 })
+      if (!m.player2_id) slots.push({ matchId: m.id, slot: 2 })
+      return slots
+    })
+  const unseatedPlayers = allPlayers.filter((p) => !seatedPlayerIds.has(p.id))
+
+  // Bracket sizing scales up on wider viewports, with an extra bump in
+  // fullscreen mode (e.g. displaying on a TV/projector). The round gap and
+  // its connector-line offset/width must stay exact halves of each other
+  // (gap-N pairs with -right-(N/2) w-(N/2)) or the bracket lines visually
+  // detach from the next round's column.
+  const colWidthClass = isFullscreen ? 'w-64 sm:w-80 lg:w-96' : 'w-64 sm:w-72 lg:w-80'
+  const cardPadClass = isFullscreen ? 'p-4 sm:p-5' : 'p-3 sm:p-4'
+  const nameTextClass = isFullscreen ? 'text-base sm:text-lg' : 'text-sm sm:text-base'
+  const roundLabelClass = isFullscreen ? 'text-base sm:text-lg' : 'text-sm sm:text-base'
+  const bracketAvatarSize = isFullscreen ? 'md' : 'sm'
+  const roundGapClass = 'gap-8 sm:gap-10 lg:gap-12'
+  const connectorClass = 'absolute -right-4 sm:-right-5 lg:-right-6 top-[25%] bottom-[25%] w-4 sm:w-5 lg:w-6 border-r-2 border-t-2 border-b-2 border-slate-300 dark:border-slate-700 rounded-r-lg'
 
   const matchesDecided = matches.filter((m) => m.winner_id !== null).length
   const currentRound = tournament.status === 'completed' ? rounds.length : (matches.find((m) => m.winner_id === null && m.player1_id && m.player2_id)?.round ?? rounds[0])
@@ -276,6 +299,23 @@ export function TournamentDetail() {
     }
   }
 
+  async function handleAddParticipant(playerId: string) {
+    const target = openRound1Slots[0]
+    if (!target) return
+    setBracketError(null)
+    const { error } = await supabase.rpc('admin_set_tournament_slot', {
+      p_match_id: target.matchId,
+      p_slot: target.slot,
+      p_player_id: playerId,
+    })
+    if (error) {
+      setBracketError(error.message)
+      return
+    }
+    setShowAddParticipant(false)
+    await load()
+  }
+
   async function handleSetSlot(target: Slot, newPlayerId: string | null) {
     setBracketError(null)
     const { error } = await supabase.rpc('admin_set_tournament_slot', {
@@ -307,6 +347,11 @@ export function TournamentDetail() {
         <button onClick={toggleFullscreen} className="btn-ghost p-2" title={isFullscreen ? 'Avslutt fullskjerm' : 'Vis i fullskjerm'}>
           {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
         </button>
+        {canEditBracket && tournament.status !== 'completed' && (
+          <button onClick={() => setShowAddParticipant(true)} className="btn-secondary py-2 px-3 text-sm">
+            <UserPlus size={16} /> Legg til deltaker
+          </button>
+        )}
         {player?.is_admin && (
           <button onClick={handleDelete} className="btn-ghost p-2 text-rose-600" title="Slett turnering">
             <Trash2 size={18} />
@@ -380,15 +425,15 @@ export function TournamentDetail() {
         </div>
       )}
 
-      <div className="flex items-stretch gap-10 overflow-x-auto pb-4">
+      <div className={`flex items-stretch ${roundGapClass} overflow-x-auto pb-4`}>
         {rounds.map((round, roundIdx) => {
           const roundMatches = matches.filter((m) => m.round === round).sort((a, b) => a.position - b.position)
           const isLast = roundIdx === rounds.length - 1
           const pairs = chunkPairs(roundMatches)
           const draggableRound = canEditBracket && round === 1
           return (
-            <div key={round} className="flex flex-col shrink-0 w-64">
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 text-center mb-4">
+            <div key={round} className={`flex flex-col shrink-0 ${colWidthClass}`}>
+              <p className={`${roundLabelClass} font-semibold text-slate-500 dark:text-slate-400 text-center mb-4`}>
                 {roundName(round, rounds.length)}
               </p>
               <div className="flex-1 flex flex-col justify-around gap-10">
@@ -406,7 +451,7 @@ export function TournamentDetail() {
                             if (Date.now() < suppressClickUntil.current) return
                             if (isDecided) setViewing(m)
                           }}
-                          className={`card p-3 flex flex-col gap-2 min-h-[92px] ${isDecided ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''}`}
+                          className={`card ${cardPadClass} flex flex-col gap-2 min-h-[92px] ${isDecided ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''}`}
                         >
                           {m.is_lucky_loser && (
                             <span className="inline-flex items-center gap-1 self-start text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
@@ -443,11 +488,20 @@ export function TournamentDetail() {
                                     {round === 1 && seed !== undefined && seed !== null && (
                                       <span className="text-[10px] text-slate-400 font-mono w-4 text-right shrink-0">{seed}</span>
                                     )}
-                                    <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
-                                    <span className={`flex-1 text-sm truncate ${isWinner ? 'font-bold' : ''}`}>{p.name}</span>
+                                    <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size={bracketAvatarSize} />
+                                    <span className={`flex-1 ${nameTextClass} truncate ${isWinner ? 'font-bold' : ''}`}>{p.name}</span>
                                   </>
                                 ) : (
-                                  <span className="flex-1 text-sm text-slate-400 italic">Venter...</span>
+                                  <span
+                                    className={`flex-1 ${nameTextClass} text-slate-400 italic`}
+                                    title={
+                                      round === 1
+                                        ? 'Denne plassen fylles automatisk av beste taper (lucky loser) når de andre kampene i runden er avgjort'
+                                        : 'Venter på at forrige runde avgjøres'
+                                    }
+                                  >
+                                    {round === 1 ? 'Ledig plass (bye)' : 'Venter på vinner'}
+                                  </span>
                                 )}
                                 {score !== null && <span className="font-mono text-sm">{score}</span>}
                                 {oddsPct !== null && <span className="text-xs text-slate-400 font-mono">{oddsPct}%</span>}
@@ -481,9 +535,7 @@ export function TournamentDetail() {
                         </div>
                       )
                     })}
-                    {!isLast && pair.length === 2 && (
-                      <div className="absolute -right-5 top-[25%] bottom-[25%] w-5 border-r-2 border-t-2 border-b-2 border-slate-300 dark:border-slate-700 rounded-r-lg" />
-                    )}
+                    {!isLast && pair.length === 2 && <div className={connectorClass} />}
                   </div>
                 ))}
               </div>
@@ -588,6 +640,34 @@ export function TournamentDetail() {
           </div>
         )
       })()}
+
+      {showAddParticipant && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setShowAddParticipant(false)}>
+          <div className="card w-full max-w-xs p-6 animate-pop-in" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold">Legg til deltaker</h2>
+              <button onClick={() => setShowAddParticipant(false)} className="btn-ghost p-1.5">
+                <X size={18} />
+              </button>
+            </div>
+            {openRound1Slots.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Turneringen er full — alle {round1Matches.length * 2} plasser i runde 1 er tatt. Opprett en ny turnering for å inkludere flere spillere.
+              </p>
+            ) : unseatedPlayers.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">Alle spillere er allerede med i turneringen.</p>
+            ) : (
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                {unseatedPlayers.map((p) => (
+                  <button key={p.id} onClick={() => handleAddParticipant(p.id)} className="btn-secondary text-sm justify-start">
+                    <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" /> {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <TournamentMatchDetailModal
         match={viewing}
