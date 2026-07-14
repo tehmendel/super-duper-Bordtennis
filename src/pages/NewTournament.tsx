@@ -74,9 +74,9 @@ export function NewTournament() {
         </div>
 
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Deltakerne sås etter nåværende rating (høyest rating møter lavest rangerte først). Er antallet ikke en
-          toerpotens, får den som ellers ville fått walkover i stedet en "lucky loser"-kamp mot den beste taperen fra
-          runde 1.
+          Deltakerne sås etter nåværende rating (høyest rating møter lavest rangerte først). Bye brukes kun der det er
+          nødvendig — er antallet spillere som skal parres oddetall i en runde, får den øverste sådde i stedet en
+          "lucky loser"-kamp mot den beste taperen fra samme runde, så snart resten av runden er avgjort.
         </p>
 
         {error && <p className="text-sm text-rose-600">{error}</p>}

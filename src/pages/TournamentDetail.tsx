@@ -67,6 +67,8 @@ export function TournamentDetail() {
   const [dragOverKey, setDragOverKey] = useState<string | null>(null)
   const [slotEditor, setSlotEditor] = useState<Slot | null>(null)
   const [showAddParticipant, setShowAddParticipant] = useState(false)
+  const [addingParticipant, setAddingParticipant] = useState(false)
+  const [addParticipantError, setAddParticipantError] = useState<string | null>(null)
   const [bracketError, setBracketError] = useState<string | null>(null)
   // Pointer-based drag (instead of native HTML5 drag-and-drop) so this also
   // works with touch on mobile, not just mouse.
@@ -164,6 +166,25 @@ export function TournamentDetail() {
       return slots
     })
   const unseatedPlayers = allPlayers.filter((p) => !seatedPlayerIds.has(p.id))
+
+  // A round-2+ match fed by only one earlier-round match has exactly one
+  // slot that will never be fed by a real match (only by a lucky-loser fill)
+  // — the OTHER slot is normal, just waiting on that single feeder to
+  // decide. Before that feeder resolves, both slots look empty, so which
+  // specific slot number is the true bye has to be derived structurally
+  // (from the feeder's position parity — see advance_tournament_winner),
+  // not just from "this match currently has an empty slot".
+  const feedersByNextMatch = new Map<string, EnrichedMatch[]>()
+  matches.forEach((m) => {
+    if (m.next_match_id) feedersByNextMatch.set(m.next_match_id, [...(feedersByNextMatch.get(m.next_match_id) ?? []), m])
+  })
+  const phantomBySlot = new Map<string, 1 | 2>()
+  feedersByNextMatch.forEach((feeders, nextMatchId) => {
+    if (feeders.length === 1) {
+      const fedSlot = feeders[0].position % 2 === 0 ? 1 : 2
+      phantomBySlot.set(nextMatchId, fedSlot === 1 ? 2 : 1)
+    }
+  })
 
   // Bracket sizing scales up on wider viewports, with an extra bump in
   // fullscreen mode (e.g. displaying on a TV/projector). The round gap and
@@ -300,16 +321,18 @@ export function TournamentDetail() {
   }
 
   async function handleAddParticipant(playerId: string) {
-    const target = openRound1Slots[0]
-    if (!target) return
     setBracketError(null)
-    const { error } = await supabase.rpc('admin_set_tournament_slot', {
-      p_match_id: target.matchId,
-      p_slot: target.slot,
-      p_player_id: playerId,
-    })
+    setAddParticipantError(null)
+    setAddingParticipant(true)
+
+    const target = openRound1Slots[0]
+    const { error } = target
+      ? await supabase.rpc('admin_set_tournament_slot', { p_match_id: target.matchId, p_slot: target.slot, p_player_id: playerId })
+      : await supabase.rpc('admin_add_tournament_participant', { p_tournament_id: id, p_player_id: playerId })
+
+    setAddingParticipant(false)
     if (error) {
-      setBracketError(error.message)
+      setAddParticipantError(error.message)
       return
     }
     setShowAddParticipant(false)
@@ -492,16 +515,21 @@ export function TournamentDetail() {
                                     <span className={`flex-1 ${nameTextClass} truncate ${isWinner ? 'font-bold' : ''}`}>{p.name}</span>
                                   </>
                                 ) : (
-                                  <span
-                                    className={`flex-1 ${nameTextClass} text-slate-400 italic`}
-                                    title={
-                                      round === 1
-                                        ? 'Denne plassen fylles automatisk av beste taper (lucky loser) når de andre kampene i runden er avgjort'
-                                        : 'Venter på at forrige runde avgjøres'
-                                    }
-                                  >
-                                    {round === 1 ? 'Ledig plass (bye)' : 'Venter på vinner'}
-                                  </span>
+                                  (() => {
+                                    const isByeSlot = round === 1 || phantomBySlot.get(m.id) === slotNum
+                                    return (
+                                      <span
+                                        className={`flex-1 ${nameTextClass} text-slate-400 italic`}
+                                        title={
+                                          isByeSlot
+                                            ? 'Denne plassen fylles automatisk av beste taper (lucky loser) når de andre kampene i runden er avgjort'
+                                            : 'Venter på at forrige runde avgjøres'
+                                        }
+                                      >
+                                        {isByeSlot ? 'Ledig plass (bye)' : 'Venter på vinner'}
+                                      </span>
+                                    )
+                                  })()
                                 )}
                                 {score !== null && <span className="font-mono text-sm">{score}</span>}
                                 {oddsPct !== null && <span className="text-xs text-slate-400 font-mono">{oddsPct}%</span>}
@@ -650,19 +678,28 @@ export function TournamentDetail() {
                 <X size={18} />
               </button>
             </div>
-            {openRound1Slots.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Turneringen er full — alle {round1Matches.length * 2} plasser i runde 1 er tatt. Opprett en ny turnering for å inkludere flere spillere.
-              </p>
-            ) : unseatedPlayers.length === 0 ? (
+            {unseatedPlayers.length === 0 ? (
               <p className="text-sm text-slate-500 dark:text-slate-400">Alle spillere er allerede med i turneringen.</p>
             ) : (
-              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-                {unseatedPlayers.map((p) => (
-                  <button key={p.id} onClick={() => handleAddParticipant(p.id)} className="btn-secondary text-sm justify-start">
-                    <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" /> {p.name}
-                  </button>
-                ))}
+              <div className="flex flex-col gap-3">
+                {openRound1Slots.length === 0 && (
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Ingen ledige plasser akkurat nå — turneringen bygges om for å ta inn spilleren. Dette går bare hvis ingen kamper er spilt ennå.
+                  </p>
+                )}
+                {addParticipantError && <p className="text-sm text-rose-600">{addParticipantError}</p>}
+                <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                  {unseatedPlayers.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleAddParticipant(p.id)}
+                      disabled={addingParticipant}
+                      className="btn-secondary text-sm justify-start"
+                    >
+                      <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" /> {p.name}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
