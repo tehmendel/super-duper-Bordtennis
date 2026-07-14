@@ -7,6 +7,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { TournamentMatchDetailModal } from '@/components/TournamentMatchDetailModal'
 import { useFullscreen } from '@/hooks/useFullscreen'
 import { eloWinProbability } from '@/lib/stats'
+import { formatDate } from '@/lib/date'
 import type { Player, Tournament, TournamentCommentary, TournamentMatch, TournamentMatchSet, TournamentParticipant } from '@/lib/types'
 
 function formatDuration(ms: number) {
@@ -332,7 +333,7 @@ export function TournamentDetail() {
           <Calendar size={18} className="text-brand-600 shrink-0" />
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wide text-slate-500 dark:text-slate-400">Startet</p>
-            <p className="font-bold text-sm">{new Date(tournament.created_at).toLocaleDateString('no-NO', { day: 'numeric', month: 'short' })}</p>
+            <p className="font-bold text-sm">{formatDate(tournament.created_at)}</p>
           </div>
         </div>
         <div className="card p-3 flex items-center gap-2">

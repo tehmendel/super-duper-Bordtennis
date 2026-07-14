@@ -4,6 +4,7 @@ import { Plus, Trophy, Users, Calendar } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { formatDate } from '@/lib/date'
 import type { Player, Tournament, TournamentMatch } from '@/lib/types'
 
 interface EnrichedTournament extends Tournament {
@@ -107,7 +108,7 @@ export function Tournaments() {
                   <Users size={14} /> {t.participantCount} spillere
                 </span>
                 <span className="flex items-center gap-1">
-                  <Calendar size={14} /> {new Date(t.created_at).toLocaleDateString('no-NO', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  <Calendar size={14} /> {formatDate(t.created_at)}
                 </span>
               </div>
             </Link>

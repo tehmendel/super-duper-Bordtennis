@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { AchievementToast } from '@/components/AchievementToast'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
+import { formatDate } from '@/lib/date'
 import type { AchievementDefinition, Match, MatchSet, Player } from '@/lib/types'
 
 interface EnrichedMatch extends Match {
@@ -212,7 +213,7 @@ export function PendingConfirmations() {
                     {won ? 'Seier' : 'Tap'}
                   </span>
                   <span className="text-slate-400 text-xs shrink-0">
-                    {new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO')}
+                    {formatDate(m.confirmed_at ?? m.created_at)}
                   </span>
                 </div>
               )

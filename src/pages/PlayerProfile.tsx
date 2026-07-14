@@ -26,6 +26,7 @@ import {
 } from '@/lib/stats'
 import type { AchievementDefinition, LeaderboardRow, Match, MatchSet, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
 import { WEEKDAY_NAMES } from '@/lib/constants'
+import { formatDate } from '@/lib/date'
 
 export function PlayerProfile() {
   const { id } = useParams<{ id: string }>()
@@ -300,7 +301,7 @@ export function PlayerProfile() {
           <div className="card p-4">
             <p className="text-xs text-slate-500">Peak rating</p>
             <p className="text-xl font-bold">{peak ? Math.round(peak.rating) : '–'}</p>
-            {peak && <p className="text-[11px] text-slate-400">{new Date(peak.date).toLocaleDateString('no-NO')}</p>}
+            {peak && <p className="text-[11px] text-slate-400">{formatDate(peak.date)}</p>}
           </div>
           <div className="card p-4">
             <p className="text-xs text-slate-500">Rating-volatilitet</p>
@@ -420,7 +421,7 @@ export function PlayerProfile() {
               >
                 <span className={won ? 'text-emerald-500 font-semibold' : 'text-rose-500 font-semibold'}>{won ? 'Seier' : 'Tap'}</span>
                 <span className="font-mono">{m.sets_won_player1}–{m.sets_won_player2}</span>
-                <span className="text-slate-400 text-xs">{new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO')}</span>
+                <span className="text-slate-400 text-xs">{formatDate(m.confirmed_at ?? m.created_at)}</span>
               </button>
             )
           })}

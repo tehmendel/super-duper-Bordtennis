@@ -17,6 +17,7 @@ import {
 } from '@/lib/stats'
 import type { LeaderboardRow, Match, Player, RatingHistoryEntry, Season, SeasonStanding } from '@/lib/types'
 import { MEDALS } from '@/lib/constants'
+import { formatDate } from '@/lib/date'
 
 type Period = 'all' | 'month' | 'quarter' | 'season'
 
@@ -220,13 +221,13 @@ export function Leaderboard() {
       icon: TrendingUp,
       color: 'text-emerald-500',
       player: highestPeak.player,
-      description: `${Math.round(highestPeak.value.rating)} poeng (${new Date(highestPeak.value.date).toLocaleDateString('no-NO')})`,
+      description: `${Math.round(highestPeak.value.rating)} poeng (${formatDate(highestPeak.value.date)})`,
     },
     one_day: mostInOneDay && {
       icon: CalendarDays,
       color: 'text-blue-500',
       player: mostInOneDay.player,
-      description: `${mostInOneDay.value.count} kamper${mostInOneDay.value.day ? ` (${new Date(mostInOneDay.value.day).toLocaleDateString('no-NO')})` : ''}`,
+      description: `${mostInOneDay.value.count} kamper${mostInOneDay.value.day ? ` (${formatDate(mostInOneDay.value.day)})` : ''}`,
     },
   }
 

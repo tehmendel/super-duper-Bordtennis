@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ChevronDown, ChevronRight, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { formatDateTime } from '@/lib/date'
 import type { AuditLogEntry } from '@/lib/types'
 
 const TABLE_LABELS: Record<string, string> = {
@@ -107,7 +108,7 @@ export function AdminAuditLog() {
                     <span className="text-xs text-slate-500 dark:text-slate-400 truncate">({e.changed_fields.join(', ')})</span>
                   )}
                   <span className="text-xs text-slate-400 ml-auto shrink-0">{e.changed_by_name ?? 'System'}</span>
-                  <span className="text-xs text-slate-400 shrink-0">{new Date(e.created_at).toLocaleString('no-NO')}</span>
+                  <span className="text-xs text-slate-400 shrink-0">{formatDateTime(e.created_at)}</span>
                 </button>
 
                 {isOpen && (

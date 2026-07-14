@@ -1,3 +1,4 @@
+import { formatDate } from '@/lib/date'
 import type { AchievementDefinition } from '@/lib/types'
 
 export function AchievementBadge({
@@ -15,7 +16,7 @@ export function AchievementBadge({
 
   return (
     <div
-      title={earned && earnedAt ? `Oppnådd ${new Date(earnedAt).toLocaleDateString('no-NO')}` : isMystery ? 'Skjult prestasjon' : 'Ikke oppnådd ennå'}
+      title={earned && earnedAt ? `Oppnådd ${formatDate(earnedAt)}` : isMystery ? 'Skjult prestasjon' : 'Ikke oppnådd ennå'}
       className={`card flex flex-col items-center gap-1 p-4 text-center transition ${
         earned ? '' : 'opacity-35 grayscale'
       }`}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Pencil, Trophy, Square } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { formatDate } from '@/lib/date'
 import type { Season } from '@/lib/types'
 
 export function AdminSeasons() {
@@ -90,9 +91,9 @@ export function AdminSeasons() {
             <div className="flex-1">
               <p className="font-medium text-sm">{s.name} {s.is_active && <span className="text-xs text-emerald-500">(pågår)</span>}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Startet {new Date(s.started_at).toLocaleDateString('no-NO')}
-                {s.ended_at && ` · Avsluttet ${new Date(s.ended_at).toLocaleDateString('no-NO')}`}
-                {s.target_end_date && ` · Planlagt slutt ${new Date(s.target_end_date).toLocaleDateString('no-NO')}`}
+                Startet {formatDate(s.started_at)}
+                {s.ended_at && ` · Avsluttet ${formatDate(s.ended_at)}`}
+                {s.target_end_date && ` · Planlagt slutt ${formatDate(s.target_end_date)}`}
               </p>
             </div>
             <button onClick={() => openEdit(s)} className="btn-ghost p-2" title="Rediger">

@@ -11,6 +11,7 @@ import { AdminAuditLog } from '@/components/AdminAuditLog'
 import { AdminLadder } from '@/components/AdminLadder'
 import type { AchievementDefinition, Match, Player, PlayerAchievement } from '@/lib/types'
 import { WEEKDAY_NAMES as DAY_NAMES } from '@/lib/constants'
+import { formatDate } from '@/lib/date'
 
 interface EnrichedMatch extends Match {
   player1: Player
@@ -273,7 +274,7 @@ export function Admin() {
                       return (
                         <div
                           key={e.id}
-                          title={new Date(e.earned_at).toLocaleDateString('no-NO')}
+                          title={formatDate(e.earned_at)}
                           className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-full pl-1 pr-2.5 py-1"
                         >
                           <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />

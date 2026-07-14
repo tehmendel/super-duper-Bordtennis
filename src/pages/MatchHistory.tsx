@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
+import { formatDate } from '@/lib/date'
 import type { Match, Player, RatingHistoryEntry } from '@/lib/types'
 
 interface EnrichedMatch extends Match {
@@ -78,7 +79,7 @@ export function MatchHistory() {
                 className="card p-4 flex items-center gap-3 flex-wrap text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
                 <span className="text-xs text-slate-400 w-20 shrink-0">
-                  {new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO')}
+                  {formatDate(m.confirmed_at ?? m.created_at)}
                 </span>
                 <span className="flex items-center gap-2 flex-1 min-w-0">
                   <PlayerAvatar name={m.player1.name} avatarUrl={m.player1.avatar_url} size="sm" />

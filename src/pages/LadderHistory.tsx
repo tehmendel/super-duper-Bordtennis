@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { useLadderEnabled } from '@/hooks/useLadderEnabled'
+import { formatDate } from '@/lib/date'
 import type { LadderChallengeLog, LadderPosition, Player } from '@/lib/types'
 
 interface PositionRow extends LadderPosition {
@@ -191,7 +192,7 @@ export function LadderHistory() {
                       ? `${l.challenger.name} tok plassen! 🎉`
                       : `${l.defender.name} forsvarte plassen sin`}
                     {' · '}
-                    {new Date(l.created_at).toLocaleDateString('no-NO')}
+                    {formatDate(l.created_at)}
                   </p>
                 </div>
               </div>

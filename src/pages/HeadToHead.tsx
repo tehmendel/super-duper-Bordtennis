@@ -7,6 +7,7 @@ import { CardHeader } from '@/components/CardHeader'
 import { useCardLayout, type CardDef } from '@/hooks/useCardLayout'
 import { suggestedHandicap } from '@/lib/handicap'
 import { eloWinProbability } from '@/lib/stats'
+import { formatDate } from '@/lib/date'
 import type { Match, Player } from '@/lib/types'
 
 const CARD_DEFS: CardDef[] = [
@@ -157,7 +158,7 @@ export function HeadToHead() {
                     <span className={m.winner_id === aId ? 'font-bold text-emerald-500' : 'text-slate-500'}>{a.name}</span>
                     <span className="font-mono">{aIsP1 ? m.sets_won_player1 : m.sets_won_player2}–{aIsP1 ? m.sets_won_player2 : m.sets_won_player1}</span>
                     <span className={m.winner_id === bId ? 'font-bold text-emerald-500' : 'text-slate-500'}>{b.name}</span>
-                    <span className="text-xs text-slate-400">{new Date(m.confirmed_at ?? m.created_at).toLocaleDateString('no-NO')}</span>
+                    <span className="text-xs text-slate-400">{formatDate(m.confirmed_at ?? m.created_at)}</span>
                   </div>
                 )
               })}
