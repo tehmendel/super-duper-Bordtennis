@@ -241,7 +241,7 @@ export function PlayerProfile() {
           winRate={winRate}
           matchesPlayed={matches.length}
           peakRating={peak?.rating ?? null}
-          achievementsEarned={earned.length}
+          achievementsEarned={new Set(earned.map((e) => e.achievement_id)).size}
           achievementsTotal={achievementsTotal}
           rank={rank}
           totalPlayers={total}
