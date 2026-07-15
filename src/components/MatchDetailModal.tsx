@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { X, Swords, Share2 } from 'lucide-react'
+import { X, Swords, Share2, ChevronDown } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -15,18 +15,31 @@ interface Details {
   deltas: RatingHistoryEntry[]
 }
 
+// Reconstructs the exact Elo math from apply_confirmed_match() in the
+// database. rating_before/delta are stored verbatim from that calculation,
+// so the K-factor (48 for a player's first 10 confirmed matches in the
+// season, else 32) can be derived exactly rather than re-queried.
+function eloBreakdown(ownBefore: number, opponentBefore: number, won: boolean, delta: number) {
+  const expected = 1 / (1 + Math.pow(10, (opponentBefore - ownBefore) / 400))
+  const actual = won ? 1 : 0
+  const k = Math.round(delta / (actual - expected))
+  return { expected, actual, k }
+}
+
 export function MatchDetailModal({ matchId, onClose }: { matchId: string | null; onClose: () => void }) {
   const { player: currentPlayer } = useAuth()
   const [details, setDetails] = useState<Details | null>(null)
   const [loading, setLoading] = useState(false)
   const [rematchSent, setRematchSent] = useState(false)
   const [rematchBusy, setRematchBusy] = useState(false)
+  const [showEloExplain, setShowEloExplain] = useState(false)
   const { ref: shareRef, share } = useShareImage(`kamp-${matchId ?? 'resultat'}.png`)
 
   useEffect(() => {
     if (!matchId) {
       setDetails(null)
       setRematchSent(false)
+      setShowEloExplain(false)
       return
     }
     let cancelled = false
@@ -78,6 +91,15 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
 
   const d1 = details?.deltas.find((d) => d.player_id === details.match.player1_id)
   const d2 = details?.deltas.find((d) => d.player_id === details.match.player2_id)
+
+  const p1Won = !!(details && details.match.winner_id === details.player1.id)
+  const eloExplain =
+    d1 && d2
+      ? {
+          p1: eloBreakdown(d1.rating_before, d2.rating_before, p1Won, d1.delta),
+          p2: eloBreakdown(d2.rating_before, d1.rating_before, !p1Won, d2.delta),
+        }
+      : null
 
   // sets_won_* is only computed when a match is confirmed — fall back to
   // counting the sets directly so pending matches (viewed before approving)
@@ -179,6 +201,57 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                   : new Date(details.match.confirmed_at ?? details.match.created_at).toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })}
               </div>
             </div>
+
+            {eloExplain && (
+              <div className="border-t border-slate-100 dark:border-slate-800 pt-3">
+                <button
+                  onClick={() => setShowEloExplain((v) => !v)}
+                  className="text-xs font-medium text-brand-600 dark:text-brand-400 flex items-center gap-1"
+                >
+                  {showEloExplain ? 'Skjul' : 'Vis'} hvordan ratingen ble beregnet
+                  <ChevronDown size={14} className={showEloExplain ? 'rotate-180 transition-transform' : 'transition-transform'} />
+                </button>
+                {showEloExplain && (
+                  <div className="mt-2 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-400">
+                    <p>
+                      Forventet vinnersjanse regnes ut fra ratingforskjellen før kampen. Den som var høyest ratet hadde
+                      størst forventet sjanse til å vinne — men får da også mindre å hente ved seier, og mister mer ved tap.
+                    </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      {[
+                        { p: details.player1, won: p1Won, d: d1!, e: eloExplain.p1 },
+                        { p: details.player2, won: !p1Won, d: d2!, e: eloExplain.p2 },
+                      ].map(({ p, won, d, e }) => {
+                        // Rounded independently, "rating før" + "endring" can be
+                        // one point off from a separately-rounded "rating etter"
+                        // (e.g. 1084 + 10 = 1094, but the real value rounds to
+                        // 1095) — so derive the shown "etter" from the shown
+                        // "før" and "endring" instead, so the equation a reader
+                        // checks by hand always balances exactly.
+                        const before = Math.round(d.rating_before)
+                        const roundedDelta = Math.round(d.delta)
+                        return (
+                          <div key={p.id} className="flex flex-col gap-0.5">
+                            <p className="font-semibold text-slate-700 dark:text-slate-300">{p.name}</p>
+                            <p>Rating før: {before}</p>
+                            <p>Forventet sjanse: {Math.round(e.expected * 100)}%</p>
+                            <p>Faktisk utfall: {won ? 'Seier (1,0)' : 'Tap (0,0)'}</p>
+                            <p>K-faktor: {e.k}</p>
+                            <p className="font-mono text-[11px] text-slate-400">
+                              {before} {roundedDelta >= 0 ? '+' : '−'} {Math.abs(roundedDelta)} = {before + roundedDelta}
+                            </p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <p className="italic">
+                      K-faktoren er 48 for en spillers 10 første kamper i sesongen (raskere justering mens ratingen er
+                      usikker), deretter 32.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="flex gap-2">
               <button onClick={share} className="btn-secondary flex-1 text-sm">
