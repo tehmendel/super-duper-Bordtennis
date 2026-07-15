@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Pencil, Skull, Trophy, Swords } from 'lucide-react'
+import { Pencil, Skull, Trophy, Swords, Sun, Moon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import { useTheme } from '@/hooks/useTheme'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { FormPills } from '@/components/FormPills'
 import { AchievementBadge } from '@/components/AchievementBadge'
@@ -31,6 +32,7 @@ import { formatDate } from '@/lib/date'
 export function PlayerProfile() {
   const { id } = useParams<{ id: string }>()
   const { player: currentPlayer } = useAuth()
+  const { theme, toggle: toggleTheme } = useTheme()
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [challenging, setChallenging] = useState(false)
   const [challengeSent, setChallengeSent] = useState(false)
@@ -198,9 +200,15 @@ export function PlayerProfile() {
           <p className="text-slate-500 dark:text-slate-400">{rank ? `Plass #${rank} av ${total}` : 'Ingen rangering ennå'}</p>
         </div>
         {currentPlayer?.id === player.id ? (
-          <Link to="/profile/edit" className="btn-secondary py-2 px-3 text-sm">
-            <Pencil size={16} /> Rediger
-          </Link>
+          <div className="flex flex-col items-end gap-2">
+            <Link to="/profile/edit" className="btn-secondary py-2 px-3 text-sm">
+              <Pencil size={16} /> Rediger profil
+            </Link>
+            <button onClick={toggleTheme} className="btn-ghost py-1.5 px-2 text-xs">
+              {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+              {theme === 'dark' ? 'Lys modus' : 'Mørk modus'}
+            </button>
+          </div>
         ) : (
           currentPlayer && (
             <button

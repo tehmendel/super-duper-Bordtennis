@@ -1,11 +1,11 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, Sun, Moon, LogOut, Swords, Users, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, LogOut, Swords, Users, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { useTheme } from '@/hooks/useTheme'
 import { useLayoutEdit } from '@/contexts/LayoutEditContext'
 import { useLadderEnabled } from '@/hooks/useLadderEnabled'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import type { PageKey } from '@/lib/types'
+import { APP_VERSION } from '@/lib/version'
 
 const PRIMARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: boolean; pageKey: PageKey }[] = [
   { to: '/', label: 'Dashboard', icon: Home, end: true, pageKey: 'dashboard' },
@@ -27,7 +27,6 @@ const MOBILE_EXTRA_ITEM = { to: '/more', label: 'Mer', icon: MoreHorizontal, end
 
 export function Layout() {
   const { player, signOut, hasAccess } = useAuth()
-  const { theme, toggle } = useTheme()
   const { editMode, toggle: toggleEditMode } = useLayoutEdit()
   const ladderEnabled = useLadderEnabled()
 
@@ -37,7 +36,7 @@ export function Layout() {
 
   return (
     <div className="min-h-dvh flex flex-col md:flex-row">
-      <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:dark:border-slate-800 md:p-4 md:gap-2">
+      <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:dark:border-slate-800 md:p-4 md:gap-2 md:sticky md:top-0 md:h-dvh md:self-start">
         <div className="px-2 py-3 text-lg font-bold">🏓 Bordtennisportalen</div>
         {visiblePrimary.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -90,14 +89,11 @@ export function Layout() {
               <span className="truncate text-sm font-medium">{player.name}</span>
             </NavLink>
           )}
-          <button onClick={toggle} className="btn-ghost justify-start">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            {theme === 'dark' ? 'Lys modus' : 'Mørk modus'}
-          </button>
           <button onClick={signOut} className="btn-ghost justify-start text-rose-600 dark:text-rose-400">
             <LogOut size={18} />
             Logg ut
           </button>
+          <p className="text-[10px] text-slate-400 dark:text-slate-600 px-3">{APP_VERSION}</p>
         </div>
       </aside>
 
@@ -109,14 +105,12 @@ export function Layout() {
               <PlayerAvatar name={player.name} avatarUrl={player.avatar_url} size="sm" />
             </NavLink>
           )}
-          <button onClick={toggle} className="btn-ghost p-2">
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
           <button onClick={signOut} className="btn-ghost p-2 text-rose-600 dark:text-rose-400">
             <LogOut size={18} />
           </button>
         </div>
       </header>
+      <p className="md:hidden text-[10px] text-slate-400 dark:text-slate-600 px-4 py-1">{APP_VERSION}</p>
 
       <main className="flex-1 overflow-y-auto pb-20 md:pb-6">
         <div className="mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl p-4 md:p-8">
