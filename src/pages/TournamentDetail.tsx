@@ -182,7 +182,15 @@ export function TournamentDetail() {
       ro.disconnect()
       window.removeEventListener('resize', recompute)
     }
-  }, [matches, isFullscreen])
+    // `loading` is included deliberately: `matches` can be set to its real
+    // value in a render where the component still shows the "Laster..."
+    // early return (loading hasn't flipped to false in that same commit
+    // yet), so the actual match card DOM doesn't exist and every ref lookup
+    // above comes back empty. Without watching `loading` too, this effect
+    // never re-ran once the cards actually mounted — only a later resize
+    // event (which calls recompute() directly, outside this effect) would
+    // stumble into computing them correctly.
+  }, [matches, isFullscreen, loading])
 
   if (loading) return <p className="text-slate-500">Laster...</p>
   if (!tournament) return <p className="text-slate-500">Fant ikke turneringen.</p>
@@ -226,6 +234,11 @@ export function TournamentDetail() {
       phantomBySlot.set(nextMatchId, fedSlot === 1 ? 2 : 1)
     }
   })
+
+  // Each bye slot has one specific, randomly pre-designated real match whose
+  // loser will fill it (chosen once, at bracket creation) — flag that source
+  // match too, so it's visible in advance which match decides the lucky loser.
+  const luckyLoserSourceIds = new Set(matches.filter((m) => m.lucky_loser_source_match_id).map((m) => m.lucky_loser_source_match_id as string))
 
   // Bracket sizing scales up on wider viewports, with an extra bump in
   // fullscreen mode (e.g. displaying on a TV/projector). The round gap and
@@ -518,6 +531,8 @@ export function TournamentDetail() {
                         round === 1
                           ? (m.player1_id === null) !== (m.player2_id === null)
                           : phantomBySlot.has(m.id)
+                      const isByeReceiver = m.is_lucky_loser || hasPendingByeSlot
+                      const isLuckyLoserSource = luckyLoserSourceIds.has(m.id)
                       return (
                         <div
                           key={m.id}
@@ -533,8 +548,15 @@ export function TournamentDetail() {
                             notPlayedYet ? 'ring-2 ring-amber-400 dark:ring-amber-500' : ''
                           }`}
                         >
-                          {(m.is_lucky_loser || hasPendingByeSlot) && (
-                            <span className="inline-flex items-center gap-1 self-start text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+                          {(isByeReceiver || isLuckyLoserSource) && (
+                            <span
+                              className="inline-flex items-center gap-1 self-start text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
+                              title={
+                                isLuckyLoserSource && !isByeReceiver
+                                  ? 'Taperen av denne kampen blir lucky loser og går videre i en annen kamp'
+                                  : undefined
+                              }
+                            >
                               <Dices size={10} /> Lucky loser
                             </span>
                           )}

@@ -192,6 +192,7 @@ export interface TournamentMatch {
   winner_id: string | null
   next_match_id: string | null
   is_lucky_loser: boolean
+  lucky_loser_source_match_id: string | null
 }
 
 export interface TournamentMatchSet {
