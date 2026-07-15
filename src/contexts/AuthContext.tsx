@@ -8,6 +8,15 @@ export type MfaStatus = 'unenrolled' | 'unverified' | 'verified' | null
 interface AuthContextValue {
   session: Session | null
   player: Player | null
+  /** The actual logged-in account, regardless of impersonation. Writes that
+   * need "my own identity" (profile edit, challenges, self-submitted
+   * matches) must key off this, never `player` — the database only ever
+   * authorizes actions as this real account anyway (RLS resolves identity
+   * from the session's auth.uid(), not anything the client displays). */
+  realPlayer: Player | null
+  isImpersonating: boolean
+  startImpersonation: (target: Player) => void
+  stopImpersonation: () => void
   loading: boolean
   permissions: Partial<Record<PageKey, AccessLevel>>
   hasAccess: (page: PageKey, level?: AccessLevel) => boolean
@@ -21,10 +30,16 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
-  const [player, setPlayer] = useState<Player | null>(null)
+  const [realPlayer, setRealPlayer] = useState<Player | null>(null)
+  // Deliberately plain React state, not persisted anywhere — a page refresh
+  // exiting impersonation is a reasonable safety default for a feature
+  // that's meant to be a temporary "view as" mode, not a standing setting.
+  const [impersonatedPlayer, setImpersonatedPlayer] = useState<Player | null>(null)
   const [permissions, setPermissions] = useState<Partial<Record<PageKey, AccessLevel>>>({})
   const [mfaStatus, setMfaStatus] = useState<MfaStatus>(null)
   const [loading, setLoading] = useState(true)
+
+  const player = impersonatedPlayer ?? realPlayer
 
   // 'unenrolled' = no TOTP factor at all yet (must set one up now).
   // 'unverified' = has a factor, but this session hasn't completed the code
@@ -43,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loadPlayer = useCallback(async (userId: string) => {
     const { data } = await supabase.from('players').select('*').eq('auth_user_id', userId).maybeSingle()
-    setPlayer(data ?? null)
+    setRealPlayer(data ?? null)
     return data ?? null
   }, [])
 
@@ -100,7 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const p = await loadPlayer(session.user.id)
         await loadPermissions(p)
       } else {
-        setPlayer(null)
+        setRealPlayer(null)
+        setImpersonatedPlayer(null)
         setPermissions({})
         setMfaStatus(null)
       }
@@ -112,13 +128,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshPlayer = useCallback(async () => {
     if (session) {
       const p = await loadPlayer(session.user.id)
-      await loadPermissions(p)
+      await loadPermissions(impersonatedPlayer ?? p)
     }
-  }, [session, loadPlayer, loadPermissions])
+  }, [session, loadPlayer, loadPermissions, impersonatedPlayer])
 
   const signOut = useCallback(async () => {
+    setImpersonatedPlayer(null)
     await supabase.auth.signOut()
   }, [])
+
+  // Only a genuine admin may start impersonating — checked against
+  // realPlayer, never the currently-effective player, so an admin who is
+  // themselves impersonating someone can't use this to "impersonate through"
+  // to a third identity, and it can never be true for a non-admin no matter
+  // what's being displayed.
+  const startImpersonation = useCallback(
+    (target: Player) => {
+      if (!realPlayer?.is_admin) return
+      setImpersonatedPlayer(target)
+      loadPermissions(target)
+    },
+    [realPlayer, loadPermissions],
+  )
+
+  const stopImpersonation = useCallback(() => {
+    setImpersonatedPlayer(null)
+    loadPermissions(realPlayer)
+  }, [realPlayer, loadPermissions])
 
   const hasAccess = useCallback(
     (page: PageKey, level: AccessLevel = 'read') => {
@@ -132,7 +168,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, player, loading, permissions, hasAccess, refreshPlayer, signOut, mfaStatus, refreshMfaStatus }}
+      value={{
+        session,
+        player,
+        realPlayer,
+        isImpersonating: !!impersonatedPlayer,
+        startImpersonation,
+        stopImpersonation,
+        loading,
+        permissions,
+        hasAccess,
+        refreshPlayer,
+        signOut,
+        mfaStatus,
+        refreshMfaStatus,
+      }}
     >
       {children}
     </AuthContext.Provider>

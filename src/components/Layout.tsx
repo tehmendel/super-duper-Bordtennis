@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, LogOut, Swords, Users, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText } from 'lucide-react'
+import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, LogOut, Swords, Users, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText, Eye, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLayoutEdit } from '@/contexts/LayoutEditContext'
 import { useLadderEnabled } from '@/hooks/useLadderEnabled'
@@ -26,7 +26,7 @@ const SECONDARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: 
 const MOBILE_EXTRA_ITEM = { to: '/more', label: 'Mer', icon: MoreHorizontal, end: false }
 
 export function Layout() {
-  const { player, signOut, hasAccess } = useAuth()
+  const { player, realPlayer, isImpersonating, stopImpersonation, signOut, hasAccess } = useAuth()
   const { editMode, toggle: toggleEditMode } = useLayoutEdit()
   const ladderEnabled = useLadderEnabled()
 
@@ -35,8 +35,24 @@ export function Layout() {
   const mobileItems = [...visiblePrimary, MOBILE_EXTRA_ITEM]
 
   return (
-    <div className="min-h-dvh flex flex-col md:flex-row">
-      <aside className="hidden md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:dark:border-slate-800 md:p-4 md:gap-2 md:sticky md:top-0 md:h-dvh md:self-start">
+    <>
+      {isImpersonating && (
+        <div className="fixed top-0 inset-x-0 z-50 h-10 bg-amber-400 text-amber-950 text-xs sm:text-sm font-medium flex items-center justify-center gap-3 px-4">
+          <Eye size={14} className="shrink-0" />
+          <span className="truncate">
+            {realPlayer?.name} (admin) innlogget som <strong>{player?.name}</strong>
+          </span>
+          <button onClick={stopImpersonation} className="flex items-center gap-1 shrink-0 underline font-semibold">
+            <X size={14} /> Avslutt
+          </button>
+        </div>
+      )}
+      <div className={`min-h-dvh flex flex-col md:flex-row ${isImpersonating ? 'pt-10' : ''}`}>
+      <aside
+        className={`hidden md:flex md:w-60 md:flex-col md:border-r md:border-slate-200 md:dark:border-slate-800 md:p-4 md:gap-2 md:sticky md:self-start ${
+          isImpersonating ? 'md:top-10 md:h-[calc(100dvh-2.5rem)]' : 'md:top-0 md:h-dvh'
+        }`}
+      >
         <div className="px-2 py-3 text-lg font-bold">🏓 Bordtennisportalen</div>
         {visiblePrimary.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -147,6 +163,7 @@ export function Layout() {
           {editMode ? <Check size={20} /> : <LayoutGrid size={20} />}
         </button>
       )}
-    </div>
+      </div>
+    </>
   )
 }

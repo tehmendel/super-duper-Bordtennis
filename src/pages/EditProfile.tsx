@@ -7,7 +7,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { pushSupported, getExistingSubscription, enablePushNotifications, disablePushNotifications } from '@/lib/push'
 
 export function EditProfile() {
-  const { player, session, refreshPlayer, hasAccess } = useAuth()
+  const { player, session, refreshPlayer, hasAccess, isImpersonating } = useAuth()
   const navigate = useNavigate()
   const [name, setName] = useState(player?.name ?? '')
   const avatarUrl = player?.avatar_url ?? null
@@ -119,7 +119,15 @@ export function EditProfile() {
     <div className="flex flex-col gap-6 max-w-sm">
       <h1 className="text-2xl font-bold">Rediger profil</h1>
 
-      {canEdit ? (
+      {isImpersonating ? (
+        <div className="card p-5 flex items-center gap-3">
+          <PlayerAvatar name={player.name} avatarUrl={player.avatar_url} />
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Profilredigering er slått av mens du ser som en annen bruker — endringer ville uansett blitt lagret på din
+            egen konto, ikke {player.name}s. Avslutt visningen for å redigere din egen profil.
+          </p>
+        </div>
+      ) : canEdit ? (
         <>
           <form onSubmit={handleSubmit} className="card p-5 flex flex-col gap-4">
             <div className="flex flex-col items-center gap-3">

@@ -9,6 +9,7 @@ import { AdminSeasons } from '@/components/AdminSeasons'
 import { AdminRoles } from '@/components/AdminRoles'
 import { AdminAuditLog } from '@/components/AdminAuditLog'
 import { AdminLadder } from '@/components/AdminLadder'
+import { AdminImpersonate } from '@/components/AdminImpersonate'
 import type { AchievementDefinition, Match, Player, PlayerAchievement } from '@/lib/types'
 import { WEEKDAY_NAMES as DAY_NAMES } from '@/lib/constants'
 import { formatDate } from '@/lib/date'
@@ -30,7 +31,7 @@ function StatusPill({ status }: { status: Match['status'] }) {
 
 export function Admin() {
   const { player } = useAuth()
-  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog' | 'ladder'>('matches')
+  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog' | 'ladder' | 'impersonate'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<EnrichedMatch | null>(null)
@@ -146,12 +147,16 @@ export function Admin() {
         <button onClick={() => setTab('auditlog')} className={tab === 'auditlog' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
           Aktivitetslogg
         </button>
+        <button onClick={() => setTab('impersonate')} className={tab === 'impersonate' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
+          Bli en bruker
+        </button>
       </div>
 
       {tab === 'seasons' && <AdminSeasons />}
       {tab === 'roles' && <AdminRoles />}
       {tab === 'ladder' && <AdminLadder />}
       {tab === 'auditlog' && <AdminAuditLog />}
+      {tab === 'impersonate' && <AdminImpersonate />}
 
       {(tab === 'matches' || tab === 'activity' || tab === 'achievements') && (loading ? (
         <p className="text-slate-500">Laster...</p>
