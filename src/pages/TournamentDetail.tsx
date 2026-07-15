@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog, UserPlus, Maximize2, Minimize2, Timer, Users, Calendar, Swords, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -78,6 +78,14 @@ export function TournamentDetail() {
   const { ref: fullscreenRef, isFullscreen, toggle: toggleFullscreen } = useFullscreen<HTMLDivElement>()
   const [now, setNow] = useState(() => Date.now())
 
+  // Connector lines between rounds are measured from actual DOM positions
+  // (not CSS percentage guesses) so they line up correctly regardless of
+  // card height differences — a bye match (no "Registrer resultat" button)
+  // is shorter than a real match, which threw off the old fixed-offset lines.
+  const bracketWrapRef = useRef<HTMLDivElement>(null)
+  const matchCardRefs = useRef<Map<string, HTMLDivElement>>(new Map())
+  const [connectorPaths, setConnectorPaths] = useState<{ id: string; d: string }[]>([])
+
   useEffect(() => {
     if (tournament?.status !== 'in_progress') return
     const timer = setInterval(() => setNow(Date.now()), 1000)
@@ -143,6 +151,39 @@ export function TournamentDetail() {
     return () => clearInterval(timer)
   }, [tournament?.status, loadCommentary])
 
+  useLayoutEffect(() => {
+    function recompute() {
+      const container = bracketWrapRef.current
+      if (!container) return
+      const containerRect = container.getBoundingClientRect()
+      const paths: { id: string; d: string }[] = []
+      matches.forEach((m) => {
+        if (!m.next_match_id) return
+        const sourceEl = matchCardRefs.current.get(m.id)
+        const targetEl = matchCardRefs.current.get(m.next_match_id)
+        if (!sourceEl || !targetEl) return
+        const sRect = sourceEl.getBoundingClientRect()
+        const tRect = targetEl.getBoundingClientRect()
+        const x1 = sRect.right - containerRect.left
+        const y1 = sRect.top + sRect.height / 2 - containerRect.top
+        const x2 = tRect.left - containerRect.left
+        const y2 = tRect.top + tRect.height / 2 - containerRect.top
+        const midX = x1 + (x2 - x1) / 2
+        paths.push({ id: m.id, d: `M ${x1} ${y1} H ${midX} V ${y2} H ${x2}` })
+      })
+      setConnectorPaths(paths)
+    }
+
+    recompute()
+    const ro = new ResizeObserver(recompute)
+    if (bracketWrapRef.current) ro.observe(bracketWrapRef.current)
+    window.addEventListener('resize', recompute)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', recompute)
+    }
+  }, [matches, isFullscreen])
+
   if (loading) return <p className="text-slate-500">Laster...</p>
   if (!tournament) return <p className="text-slate-500">Fant ikke turneringen.</p>
 
@@ -197,7 +238,6 @@ export function TournamentDetail() {
   const roundLabelClass = isFullscreen ? 'text-base sm:text-lg' : 'text-sm sm:text-base'
   const bracketAvatarSize = isFullscreen ? 'md' : 'sm'
   const roundGapClass = 'gap-8 sm:gap-10 lg:gap-12'
-  const connectorClass = 'absolute -right-4 sm:-right-5 lg:-right-6 top-[25%] bottom-[25%] w-4 sm:w-5 lg:w-6 border-r-2 border-t-2 border-b-2 border-slate-300 dark:border-slate-700 rounded-r-lg'
 
   const matchesDecided = matches.filter((m) => m.winner_id !== null).length
   const currentRound = tournament.status === 'completed' ? rounds.length : (matches.find((m) => m.winner_id === null && m.player1_id && m.player2_id)?.round ?? rounds[0])
@@ -448,10 +488,15 @@ export function TournamentDetail() {
         </div>
       )}
 
-      <div className={`flex items-stretch ${roundGapClass} overflow-x-auto pb-4`}>
-        {rounds.map((round, roundIdx) => {
+      <div className="overflow-x-auto pb-4">
+        <div ref={bracketWrapRef} className={`relative flex items-stretch ${roundGapClass}`}>
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
+            {connectorPaths.map((p) => (
+              <path key={p.id} d={p.d} fill="none" strokeWidth={2} strokeLinejoin="round" className="stroke-slate-300 dark:stroke-slate-700" />
+            ))}
+          </svg>
+          {rounds.map((round) => {
           const roundMatches = matches.filter((m) => m.round === round).sort((a, b) => a.position - b.position)
-          const isLast = roundIdx === rounds.length - 1
           const pairs = chunkPairs(roundMatches)
           const draggableRound = canEditBracket && round === 1
           return (
@@ -467,16 +512,28 @@ export function TournamentDetail() {
                       const isDecided = m.winner_id !== null
                       const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
                       const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null
+                      // Structurally known from bracket creation — not a guess — even before
+                      // any real match decides who the actual lucky loser will be.
+                      const hasPendingByeSlot =
+                        round === 1
+                          ? (m.player1_id === null) !== (m.player2_id === null)
+                          : phantomBySlot.has(m.id)
                       return (
                         <div
                           key={m.id}
+                          ref={(el) => {
+                            if (el) matchCardRefs.current.set(m.id, el)
+                            else matchCardRefs.current.delete(m.id)
+                          }}
                           onClick={() => {
                             if (Date.now() < suppressClickUntil.current) return
                             if (isDecided) setViewing(m)
                           }}
-                          className={`card ${cardPadClass} flex flex-col gap-2 min-h-[92px] ${isDecided ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''}`}
+                          className={`card ${cardPadClass} flex flex-col gap-2 min-h-[92px] ${isDecided ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''} ${
+                            notPlayedYet ? 'ring-2 ring-amber-400 dark:ring-amber-500' : ''
+                          }`}
                         >
-                          {m.is_lucky_loser && (
+                          {(m.is_lucky_loser || hasPendingByeSlot) && (
                             <span className="inline-flex items-center gap-1 self-start text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
                               <Dices size={10} /> Lucky loser
                             </span>
@@ -526,7 +583,7 @@ export function TournamentDetail() {
                                             : 'Venter på at forrige runde avgjøres'
                                         }
                                       >
-                                        {isByeSlot ? 'Ledig plass (bye)' : 'Venter på vinner'}
+                                        {isByeSlot ? 'Lucky loser' : 'Venter på vinner'}
                                       </span>
                                     )
                                   })()
@@ -563,13 +620,13 @@ export function TournamentDetail() {
                         </div>
                       )
                     })}
-                    {!isLast && pair.length === 2 && <div className={connectorClass} />}
                   </div>
                 ))}
               </div>
             </div>
           )
-        })}
+          })}
+        </div>
       </div>
 
       {editing && (

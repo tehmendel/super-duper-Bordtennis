@@ -119,7 +119,7 @@ export function Layout() {
       </header>
 
       <main className="flex-1 overflow-y-auto pb-20 md:pb-6">
-        <div className="mx-auto max-w-4xl p-4 md:p-8">
+        <div className="mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl p-4 md:p-8">
           <Outlet />
         </div>
       </main>
