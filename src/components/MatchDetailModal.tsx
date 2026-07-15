@@ -198,7 +198,12 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
               <div className="text-xs text-slate-400 text-center">
                 {details.match.status === 'pending'
                   ? 'Venter på bekreftelse'
-                  : new Date(details.match.confirmed_at ?? details.match.created_at).toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })}
+                  : (() => {
+                      const d = new Date(details.match.confirmed_at ?? details.match.created_at)
+                      const date = d.toLocaleDateString('no-NO', { weekday: 'long', day: 'numeric', month: 'long' })
+                      const time = d.toLocaleTimeString('no-NO', { hour: '2-digit', minute: '2-digit' })
+                      return `${date}, kl. ${time}`
+                    })()}
               </div>
             </div>
 
@@ -230,6 +235,12 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                         // checks by hand always balances exactly.
                         const before = Math.round(d.rating_before)
                         const roundedDelta = Math.round(d.delta)
+                        // Uses the same 2-decimal "forventet" shown just above,
+                        // so this step of the arithmetic reproduces too — marked
+                        // "≈" since it's built from already-rounded display
+                        // numbers, not the raw underlying values.
+                        const expectedRounded = Math.round(e.expected * 100) / 100
+                        const diff = Math.abs(e.actual - expectedRounded)
                         return (
                           <div key={p.id} className="flex flex-col gap-0.5">
                             <p className="font-semibold text-slate-700 dark:text-slate-300">{p.name}</p>
@@ -237,6 +248,9 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                             <p>Forventet sjanse: {Math.round(e.expected * 100)}%</p>
                             <p>Faktisk utfall: {won ? 'Seier (1,0)' : 'Tap (0,0)'}</p>
                             <p>K-faktor: {e.k}</p>
+                            <p className="font-mono text-[11px] text-slate-400">
+                              {e.k} × |{e.actual.toFixed(1)} − {expectedRounded.toFixed(2)}| = {e.k} × {diff.toFixed(2)} ≈ {roundedDelta >= 0 ? '+' : '−'}{Math.abs(roundedDelta)}
+                            </p>
                             <p className="font-mono text-[11px] text-slate-400">
                               {before} {roundedDelta >= 0 ? '+' : '−'} {Math.abs(roundedDelta)} = {before + roundedDelta}
                             </p>
