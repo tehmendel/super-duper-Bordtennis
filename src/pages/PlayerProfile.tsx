@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
-import { Pencil, Skull, Trophy, Swords, Sun, Moon } from 'lucide-react'
+import { Pencil, Skull, Trophy, Swords, Sun, Moon, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/hooks/useTheme'
@@ -10,6 +10,7 @@ import { FormPills } from '@/components/FormPills'
 import { AchievementBadge } from '@/components/AchievementBadge'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
 import { PlayerTradingCard } from '@/components/PlayerTradingCard'
+import { StatsExplainerModal } from '@/components/StatsExplainerModal'
 import {
   averageSetMargin,
   clutchRate,
@@ -34,6 +35,7 @@ export function PlayerProfile() {
   const { player: currentPlayer } = useAuth()
   const { theme, toggle: toggleTheme } = useTheme()
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
+  const [showStatsExplainer, setShowStatsExplainer] = useState(false)
   const [challenging, setChallenging] = useState(false)
   const [challengeSent, setChallengeSent] = useState(false)
   const [player, setPlayer] = useState<Player | null>(null)
@@ -172,17 +174,70 @@ export function PlayerProfile() {
     ? players.find((p) => p.id === (signature.match.winner_id === signature.match.player1_id ? signature.match.player2_id : signature.match.player1_id))
     : null
 
+  const hasLegendarySlayer = earned.some((e) => e.achievement_id === 'legendary_slayer')
+  const hasGiantSlayer = earned.some((e) => e.achievement_id === 'giant_slayer')
+
   const title = deriveTitle({
     clutch: clutch.rate,
     clutchSamples: clutch.samples,
     comeback: comeback.rate,
     comebackSamples: comeback.samples,
     deuce,
-    hasLegendarySlayer: earned.some((e) => e.achievement_id === 'legendary_slayer'),
-    hasGiantSlayer: earned.some((e) => e.achievement_id === 'giant_slayer'),
+    hasLegendarySlayer,
+    hasGiantSlayer,
     volatility,
     matchesPlayed: matches.length,
   })
+
+  // Mirrors deriveTitle()'s conditions and priority order exactly, so the
+  // explainer modal can show precisely why a given title is or isn't
+  // showing — including "close but not quite" cases like a 24% deuce-rate
+  // against a 30% requirement, which otherwise just looks like nothing
+  // happened.
+  const titleConditions = [
+    {
+      emoji: '🧊',
+      label: 'Mr. Clutch',
+      requirement: 'Clutch-rate ≥ 70 % (min. 3 avgjørende sett)',
+      met: clutch.rate !== null && clutch.samples >= 3 && clutch.rate >= 0.7,
+      progress: clutch.rate !== null ? `${Math.round(clutch.rate * 100)}% (${clutch.samples})` : '– (0)',
+    },
+    {
+      emoji: '🔄',
+      label: 'Comeback King',
+      requirement: 'Comeback-rate ≥ 50 % (min. 3 forsøk)',
+      met: comeback.rate !== null && comeback.samples >= 3 && comeback.rate >= 0.5,
+      progress: comeback.rate !== null ? `${Math.round(comeback.rate * 100)}% (${comeback.samples})` : '– (0)',
+    },
+    {
+      emoji: '⚡',
+      label: 'Legende-jeger',
+      requirement: 'Har prestasjonen «Legendarisk drap»',
+      met: hasLegendarySlayer,
+      progress: hasLegendarySlayer ? 'Oppnådd' : 'Ikke oppnådd',
+    },
+    {
+      emoji: '🗡️',
+      label: 'Giant Slayer',
+      requirement: 'Har prestasjonen «Giant Slayer»',
+      met: hasGiantSlayer,
+      progress: hasGiantSlayer ? 'Oppnådd' : 'Ikke oppnådd',
+    },
+    {
+      emoji: '♟️',
+      label: 'Deuce-mesteren',
+      requirement: 'Deuce-rate ≥ 30 % (min. 5 kamper)',
+      met: deuce !== null && deuce >= 0.3 && matches.length >= 5,
+      progress: deuce !== null ? `${Math.round(deuce * 100)}%` : '–',
+    },
+    {
+      emoji: '🪨',
+      label: 'Mr. Stabil',
+      requirement: 'Rating-volatilitet mellom 0 og 15 (min. 5 kamper)',
+      met: matches.length >= 5 && volatility > 0 && volatility < 15,
+      progress: `${Math.round(volatility)}`,
+    },
+  ]
 
   const totalPlayerCount = players.length
   const rarityByAchievement: Record<string, number> = {}
@@ -311,7 +366,16 @@ export function PlayerProfile() {
       )}
 
       <div>
-        <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Avansert statistikk</p>
+        <div className="flex items-center gap-1.5 mb-3">
+          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Avansert statistikk</p>
+          <button
+            onClick={() => setShowStatsExplainer(true)}
+            className="btn-ghost p-1"
+            title="Forklar spillerkortet og statistikken"
+          >
+            <Info size={14} />
+          </button>
+        </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="card p-4">
             <p className="text-xs text-slate-500">Peak rating</p>
@@ -444,6 +508,13 @@ export function PlayerProfile() {
       </div>
 
       <MatchDetailModal matchId={selectedMatchId} onClose={() => setSelectedMatchId(null)} />
+      {showStatsExplainer && (
+        <StatsExplainerModal
+          onClose={() => setShowStatsExplainer(false)}
+          titleConditions={titleConditions}
+          matchesPlayed={matches.length}
+        />
+      )}
     </div>
   )
 }
