@@ -113,7 +113,7 @@ export function Layout() {
       <p className="md:hidden text-[10px] text-slate-400 dark:text-slate-600 px-4 py-1">{APP_VERSION}</p>
 
       <main className="flex-1 overflow-y-auto pb-20 md:pb-6">
-        <div className="mx-auto max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl p-4 md:p-8">
+        <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl p-4 md:p-8">
           <Outlet />
         </div>
       </main>

@@ -540,7 +540,7 @@ export function TournamentDetail() {
         </div>
       )}
 
-      <div className="overflow-x-auto pb-4">
+      <div className="overflow-x-auto pb-4 px-1 pt-1">
         <div ref={bracketWrapRef} className={`relative flex items-stretch ${roundGapClass}`}>
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
             {connectorPaths.map((p) => (
