@@ -11,7 +11,7 @@ const WRITE_ACCESS_EXPLANATION: Record<PageKey, string> = {
   history: 'Ingen skrivehandlinger på selve siden – skriv gir samme tilgang som les.',
   leaderboard: 'Ingen skrivehandlinger på Toppliste – skriv gir samme tilgang som les.',
   head_to_head: 'Ingen skrivehandlinger på Head-to-head – skriv gir samme tilgang som les.',
-  tournaments: 'Gir mulighet til å opprette nye turneringer og avslutte pågående turneringer. Å redigere kampresultater/deltakere i, eller slette, en turnering er uansett forbeholdt admin.',
+  tournaments: 'Gir mulighet til å opprette nye turneringer, avslutte pågående turneringer, registrere kampresultater og redigere deltakere/kampoppsett i en pågående turnering. Å slette en turnering er uansett forbeholdt admin.',
   ladder: 'Gir mulighet til å utfordre spilleren over deg på Stigespillet.',
   qr: 'Ingen skrivehandlinger på QR-siden – skriv gir samme tilgang som les.',
   players: 'Gir mulighet til å legge til nye spillere (får automatisk generert brukernavn/passord). Å redigere, tilbakestille passord for, eller slette eksisterende spillere er uansett forbeholdt admin, uavhengig av denne rollen.',
@@ -23,7 +23,7 @@ const WRITE_ACCESS_EXPLANATION: Record<PageKey, string> = {
 const ADMIN_EXTRA_CAPABILITIES = [
   'Full tilgang til Admin-panelet: tvinge bekreft/avvis eller slette enhver kamp, redigere settscore i etterkant, se skjulte prestasjoner, administrere sesonger, administrere roller, administrere Stigespillet og se hele aktivitetsloggen.',
   'Spilleradministrasjon: redigere navn/bilde, endre brukernavn, tilbakestille passord og tilbakestille topartsinnlogging (MFA) for enhver spiller, samt slette spillere.',
-  'Turneringsadministrasjon utover start/stopp: redigere kampresultater og deltakere i en pågående turnering, og slette turneringer permanent.',
+  'Turneringsadministrasjon utover start/stopp/redigering: slette turneringer permanent.',
   'Tilpasse dashbord og sidevisninger for alle (redigeringsmodus for kort/titler).',
 ]
 

@@ -203,7 +203,7 @@ export function TournamentDetail() {
       ? [finalMatch.player1, finalMatch.player2].find((p) => p?.id === finalMatch.winner_id) ?? null
       : null
 
-  const canEditBracket = !!player?.is_admin
+  const canEditBracket = hasAccess('tournaments', 'write')
   const round1Matches = matches.filter((m) => m.round === 1)
   const seatedPlayerIds = new Set(round1Matches.flatMap((m) => [m.player1_id, m.player2_id]).filter((x): x is string => !!x))
   const openRound1Slots: Slot[] = round1Matches
@@ -510,7 +510,7 @@ export function TournamentDetail() {
 
       {canEditBracket && (
         <p className="text-xs text-slate-500 dark:text-slate-400">
-          Som admin kan du dra spillere mellom kampene i runde 1 for å endre kampoppsettet, eller bruke <UserCog size={12} className="inline" />-knappen for å bytte ut eller fjerne en deltaker.
+          Du kan dra spillere mellom kampene i runde 1 for å endre kampoppsettet, eller bruke <UserCog size={12} className="inline" />-knappen for å bytte ut eller fjerne en deltaker.
         </p>
       )}
       {bracketError && <p className="text-sm text-rose-600">{bracketError}</p>}
@@ -560,7 +560,7 @@ export function TournamentDetail() {
                 {pairs.map((pair, pairIdx) => (
                   <div key={pairIdx} className="relative flex flex-col justify-between gap-6">
                     {pair.map((m) => {
-                      const canRegister = player?.is_admin && m.player1_id && m.player2_id && m.player1_score === null
+                      const canRegister = canEditBracket && m.player1_id && m.player2_id && m.player1_score === null
                       const isDecided = m.winner_id !== null
                       const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
                       const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null

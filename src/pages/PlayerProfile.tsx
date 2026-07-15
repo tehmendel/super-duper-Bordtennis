@@ -47,6 +47,7 @@ export function PlayerProfile() {
   const [earned, setEarned] = useState<PlayerAchievement[]>([])
   const [definitions, setDefinitions] = useState<AchievementDefinition[]>([])
   const [allAchievementsEarned, setAllAchievementsEarned] = useState<Pick<PlayerAchievement, 'player_id' | 'achievement_id'>[]>([])
+  const [achievementsTotal, setAchievementsTotal] = useState(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -54,7 +55,7 @@ export function PlayerProfile() {
     let cancelled = false
     async function load() {
       setLoading(true)
-      const [{ data: p }, { data: board }, { data: hist }, { data: m }, { data: pa }, { data: defs }, { data: allP }, { data: allPa }] = await Promise.all([
+      const [{ data: p }, { data: board }, { data: hist }, { data: m }, { data: pa }, { data: defs }, { data: allP }, { data: allPa }, { data: achTotal }] = await Promise.all([
         supabase.from('players').select('*').eq('id', id).single(),
         supabase.from('leaderboard').select('*').order('rating', { ascending: false }).returns<LeaderboardRow[]>(),
         supabase.from('ratings_history').select('*').eq('player_id', id).order('created_at').returns<RatingHistoryEntry[]>(),
@@ -69,6 +70,11 @@ export function PlayerProfile() {
         supabase.from('achievement_definitions').select('*').returns<AchievementDefinition[]>(),
         supabase.from('players').select('*').returns<Player[]>(),
         supabase.from('player_achievements').select('player_id, achievement_id').returns<Pick<PlayerAchievement, 'player_id' | 'achievement_id'>[]>(),
+        // achievement_definitions RLS hides secret ones a non-admin hasn't
+        // earned yet, which would otherwise shrink the "X/Y" total shown on
+        // the card — this RPC bypasses that just for the count, so Y is
+        // always the true grand total.
+        supabase.rpc('achievement_definitions_total'),
       ])
 
       if (cancelled) return
@@ -84,6 +90,7 @@ export function PlayerProfile() {
       setDefinitions(defs ?? [])
       setPlayers(allP ?? [])
       setAllAchievementsEarned(allPa ?? [])
+      setAchievementsTotal(achTotal ?? defs?.length ?? 0)
 
       const matchIds = (m ?? []).map((match) => match.id)
       if (matchIds.length > 0) {
@@ -235,7 +242,7 @@ export function PlayerProfile() {
           matchesPlayed={matches.length}
           peakRating={peak?.rating ?? null}
           achievementsEarned={earned.length}
-          achievementsTotal={definitions.length}
+          achievementsTotal={achievementsTotal}
           rank={rank}
           totalPlayers={total}
         />
