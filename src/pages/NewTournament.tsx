@@ -6,7 +6,7 @@ import { PlayerAvatar } from '@/components/PlayerAvatar'
 import type { Player } from '@/lib/types'
 
 export function NewTournament() {
-  const { player } = useAuth()
+  const { hasAccess } = useAuth()
   const navigate = useNavigate()
   const [players, setPlayers] = useState<Player[]>([])
   const [name, setName] = useState('')
@@ -18,8 +18,8 @@ export function NewTournament() {
     supabase.from('players').select('*').order('rating', { ascending: false }).then(({ data }) => setPlayers(data ?? []))
   }, [])
 
-  if (!player?.is_admin) {
-    return <p className="text-slate-500 dark:text-slate-400">Du har ikke admin-tilgang.</p>
+  if (!hasAccess('tournaments', 'write')) {
+    return <p className="text-slate-500 dark:text-slate-400">Du har ikke tilgang til å opprette turneringer.</p>
   }
 
   function toggle(id: string) {

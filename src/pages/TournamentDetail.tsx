@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog, UserPlus, Maximize2, Minimize2, Timer, Users, Calendar, Swords, Sparkles } from 'lucide-react'
+import { Trophy, X, Trash2, Dices, Plus, GripVertical, UserCog, UserPlus, Maximize2, Minimize2, Timer, Users, Calendar, Swords, Sparkles, Square } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -49,7 +49,7 @@ function roundName(round: number, totalRounds: number) {
 export function TournamentDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { player } = useAuth()
+  const { player, hasAccess } = useAuth()
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [matchSets, setMatchSets] = useState<TournamentMatchSet[]>([])
@@ -240,6 +240,15 @@ export function TournamentDetail() {
   // match too, so it's visible in advance which match decides the lucky loser.
   const luckyLoserSourceIds = new Set(matches.filter((m) => m.lucky_loser_source_match_id).map((m) => m.lucky_loser_source_match_id as string))
 
+  // Only one match is ever "next up" — earliest round, then earliest
+  // position, among matches with both players seated but no result yet.
+  // That single match gets the gold ring and the "Neste kamp" banner,
+  // instead of every ready match lighting up at once.
+  const nextMatch =
+    [...matches]
+      .filter((m) => m.player1_id && m.player2_id && m.winner_id === null)
+      .sort((a, b) => a.round - b.round || a.position - b.position)[0] ?? null
+
   // Bracket sizing scales up on wider viewports, with an extra bump in
   // fullscreen mode (e.g. displaying on a TV/projector). The round gap and
   // its connector-line offset/width must stay exact halves of each other
@@ -306,6 +315,17 @@ export function TournamentDetail() {
     if (!id || !confirm('Slette denne turneringen permanent?')) return
     await supabase.rpc('delete_tournament', { p_tournament_id: id })
     navigate('/tournaments')
+  }
+
+  async function handleStop() {
+    if (!id || !confirm('Avslutte turneringen nå? Uspilte kamper blir stående uavgjort.')) return
+    setBracketError(null)
+    const { error } = await supabase.rpc('stop_tournament', { p_tournament_id: id })
+    if (error) {
+      setBracketError(error.message)
+      return
+    }
+    await load()
   }
 
   async function handleDrop(target: Slot) {
@@ -428,6 +448,11 @@ export function TournamentDetail() {
             <UserPlus size={16} /> Legg til deltaker
           </button>
         )}
+        {hasAccess('tournaments', 'write') && tournament.status !== 'completed' && (
+          <button onClick={handleStop} className="btn-secondary py-2 px-3 text-sm">
+            <Square size={16} /> Avslutt turnering
+          </button>
+        )}
         {player?.is_admin && (
           <button onClick={handleDelete} className="btn-ghost p-2 text-rose-600" title="Slett turnering">
             <Trash2 size={18} />
@@ -501,6 +526,20 @@ export function TournamentDetail() {
         </div>
       )}
 
+      {nextMatch && nextMatch.player1 && nextMatch.player2 && (
+        <div className="card p-4 flex items-center gap-3 flex-wrap justify-center bg-gradient-to-r from-amber-50 to-yellow-50 dark:from-amber-950/30 dark:to-yellow-950/10 border-2 border-amber-300 dark:border-amber-700">
+          <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest">Neste kamp</span>
+          <div className="flex items-center gap-2">
+            <PlayerAvatar name={nextMatch.player1.name} avatarUrl={nextMatch.player1.avatar_url} size="sm" />
+            <span className="font-semibold text-sm">{nextMatch.player1.name}</span>
+            <span className="text-slate-400 text-xs px-1">vs</span>
+            <span className="font-semibold text-sm">{nextMatch.player2.name}</span>
+            <PlayerAvatar name={nextMatch.player2.name} avatarUrl={nextMatch.player2.avatar_url} size="sm" />
+          </div>
+          <span className="text-xs text-slate-500 dark:text-slate-400">{roundName(nextMatch.round, rounds.length)}</span>
+        </div>
+      )}
+
       <div className="overflow-x-auto pb-4">
         <div ref={bracketWrapRef} className={`relative flex items-stretch ${roundGapClass}`}>
           <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ overflow: 'visible' }}>
@@ -525,13 +564,6 @@ export function TournamentDetail() {
                       const isDecided = m.winner_id !== null
                       const notPlayedYet = m.player1_id && m.player2_id && m.player1_score === null
                       const odds = notPlayedYet ? eloWinProbability(m.player1!.rating, m.player2!.rating) : null
-                      // Structurally known from bracket creation — not a guess — even before
-                      // any real match decides who the actual lucky loser will be.
-                      const hasPendingByeSlot =
-                        round === 1
-                          ? (m.player1_id === null) !== (m.player2_id === null)
-                          : phantomBySlot.has(m.id)
-                      const isByeReceiver = m.is_lucky_loser || hasPendingByeSlot
                       const isLuckyLoserSource = luckyLoserSourceIds.has(m.id)
                       return (
                         <div
@@ -545,17 +577,13 @@ export function TournamentDetail() {
                             if (isDecided) setViewing(m)
                           }}
                           className={`card ${cardPadClass} flex flex-col gap-2 min-h-[92px] ${isDecided ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50' : ''} ${
-                            notPlayedYet ? 'ring-2 ring-amber-400 dark:ring-amber-500' : ''
+                            nextMatch?.id === m.id ? 'ring-2 ring-amber-400 dark:ring-amber-500' : ''
                           }`}
                         >
-                          {(isByeReceiver || isLuckyLoserSource) && (
+                          {isLuckyLoserSource && (
                             <span
                               className="inline-flex items-center gap-1 self-start text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
-                              title={
-                                isLuckyLoserSource && !isByeReceiver
-                                  ? 'Taperen av denne kampen blir lucky loser og går videre i en annen kamp'
-                                  : undefined
-                              }
+                              title="Taperen av denne kampen blir lucky loser og går videre i en annen kamp"
                             >
                               <Dices size={10} /> Lucky loser
                             </span>

@@ -13,7 +13,7 @@ interface EnrichedTournament extends Tournament {
 }
 
 export function Tournaments() {
-  const { player } = useAuth()
+  const { hasAccess } = useAuth()
   const [tournaments, setTournaments] = useState<EnrichedTournament[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -60,7 +60,7 @@ export function Tournaments() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Turneringer</h1>
-        {player?.is_admin && (
+        {hasAccess('tournaments', 'write') && (
           <Link to="/tournaments/new" className="btn-primary py-2 px-3 text-sm">
             <Plus size={16} /> Ny turnering
           </Link>
