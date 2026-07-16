@@ -6,8 +6,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 
-// Base path is set to the repo name in GitHub Actions so the app works under
-// https://<user>.github.io/<repo>/ — defaults to '/' for local dev.
+// Served from the custom domain root (bordtennis.itsok.no), so base is '/'
+// both in GitHub Actions and local dev.
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || '/',
   resolve: {

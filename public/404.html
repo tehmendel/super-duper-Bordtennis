@@ -7,7 +7,7 @@
       // Single Page Apps for GitHub Pages: encodes the requested path into a
       // query string and redirects to index.html, which decodes it back
       // before React Router mounts. See https://github.com/rafgraph/spa-github-pages
-      var pathSegmentsToKeep = 1; // GitHub Pages project site: /<repo>/...
+      var pathSegmentsToKeep = 0; // Custom domain served from the root, no /<repo>/ prefix.
 
       var l = window.location;
       l.replace(

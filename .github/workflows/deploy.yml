@@ -32,7 +32,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_VAPID_PUBLIC_KEY: BB02WblkkeY2rVkLWXfHAP9iATBz44bqd_REr3Advu0tLoJ1j4SWTZJxYkn8q7HcqdQG8oTLpPoo_wWYVjLHdU0
-          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_BASE_PATH: /
         run: npm run build
 
       - uses: actions/upload-pages-artifact@v5
