@@ -6,8 +6,7 @@ import { PAGE_KEYS, PAGE_LABELS, type AccessLevel, type PageKey, type Player, ty
 
 const WRITE_ACCESS_EXPLANATION: Record<PageKey, string> = {
   dashboard: 'Ingen skrivehandlinger på Dashboard i dag – skriv gir samme tilgang som les.',
-  new_match: 'Gir mulighet til å registrere nye kamper.',
-  pending: 'Gir mulighet til å bekrefte eller avvise kamper som venter på bekreftelse.',
+  new_match: 'Gir mulighet til å registrere nye kamper. Resultatet godkjennes automatisk med én gang – motstanderen trenger ikke bekrefte.',
   history: 'Ingen skrivehandlinger på selve siden – skriv gir samme tilgang som les.',
   leaderboard: 'Ingen skrivehandlinger på Toppliste – skriv gir samme tilgang som les.',
   head_to_head: 'Ingen skrivehandlinger på Head-to-head – skriv gir samme tilgang som les.',

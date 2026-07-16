@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { PlusCircle, CheckCircle2, TrendingUp, TrendingDown, Hourglass, Target, Clock3, Shuffle } from 'lucide-react'
+import { PlusCircle, TrendingUp, TrendingDown, Hourglass, Target, Clock3, Shuffle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
@@ -37,7 +37,6 @@ export function Dashboard() {
   const [rank, setRank] = useState<number | null>(null)
   const [totalPlayers, setTotalPlayers] = useState(0)
   const [form, setForm] = useState<('W' | 'L')[]>([])
-  const [pendingCount, setPendingCount] = useState(0)
   const [matchOfWeek, setMatchOfWeek] = useState<MatchOfWeek | null>(null)
   const [loading, setLoading] = useState(true)
   const [season, setSeason] = useState<Season | null>(null)
@@ -59,7 +58,6 @@ export function Dashboard() {
       { data: recent },
       { count: totalCount },
       { data: allOwn },
-      { count },
       { data: history },
     ] = await Promise.all([
       supabase.from('leaderboard').select('*').order('rating', { ascending: false }).returns<LeaderboardRow[]>(),
@@ -82,12 +80,6 @@ export function Dashboard() {
         .select('*, p1:players!matches_player1_id_fkey(*), p2:players!matches_player2_id_fkey(*)')
         .eq('status', 'confirmed')
         .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`),
-      supabase
-        .from('matches')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending')
-        .or(`player1_id.eq.${player.id},player2_id.eq.${player.id}`)
-        .neq('submitted_by', player.id),
       supabase.from('ratings_history').select('*, match:matches(*)').gte('created_at', thisWeekStart.toISOString()),
     ])
 
@@ -122,8 +114,6 @@ export function Dashboard() {
       setOwnMatches(withOpponent)
       setPastMatchIndex(withOpponent.length > 0 ? Math.floor(Math.random() * withOpponent.length) : 0)
     }
-
-    setPendingCount(count ?? 0)
 
     let weekHistory = history ?? []
     let matchIsPreviousWeek = false
@@ -341,19 +331,9 @@ export function Dashboard() {
 
       <ChallengeFeed />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Link to="/matches/new" className="btn-primary py-4 text-base">
-          <PlusCircle size={20} /> Registrer kamp
-        </Link>
-        <Link to="/matches/pending" className="btn-secondary py-4 text-base relative">
-          <CheckCircle2 size={20} /> Bekreft kamper
-          {pendingCount > 0 && (
-            <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center">
-              {pendingCount}
-            </span>
-          )}
-        </Link>
-      </div>
+      <Link to="/matches/new" className="btn-primary py-4 text-base">
+        <PlusCircle size={20} /> Registrer kamp
+      </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
         {layout.orderedIds.map((id) => renderCard(id))}

@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { Home, PlusCircle, CheckCircle2, History, Trophy, QrCode, LogOut, Swords, Users, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText, Eye, X } from 'lucide-react'
+import { Home, PlusCircle, History, Trophy, QrCode, LogOut, Swords, Users, MoreHorizontal, ShieldCheck, Medal, LayoutGrid, Check, ScrollText, Eye, X } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLayoutEdit } from '@/contexts/LayoutEditContext'
 import { useLadderEnabled } from '@/hooks/useLadderEnabled'
@@ -10,7 +10,6 @@ import { APP_VERSION } from '@/lib/version'
 const PRIMARY_NAV_ITEMS: { to: string; label: string; icon: typeof Home; end: boolean; pageKey: PageKey }[] = [
   { to: '/', label: 'Dashboard', icon: Home, end: true, pageKey: 'dashboard' },
   { to: '/matches/new', label: 'Ny kamp', icon: PlusCircle, end: false, pageKey: 'new_match' },
-  { to: '/matches/pending', label: 'Bekreftelser', icon: CheckCircle2, end: false, pageKey: 'pending' },
   { to: '/matches', label: 'Historikk', icon: History, end: true, pageKey: 'history' },
   { to: '/leaderboard', label: 'Toppliste', icon: Trophy, end: false, pageKey: 'leaderboard' },
 ]

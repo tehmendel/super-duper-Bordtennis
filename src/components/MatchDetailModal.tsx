@@ -102,8 +102,8 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
       : null
 
   // sets_won_* is only computed when a match is confirmed — fall back to
-  // counting the sets directly so pending matches (viewed before approving)
-  // still show a score instead of a blank dash.
+  // counting the sets directly so a match still shows a score instead of a
+  // blank dash in the rare case it isn't confirmed yet (e.g. mid-submission).
   const setsWon1 = details?.match.sets_won_player1 ?? details?.sets.filter((s) => s.player1_score > s.player2_score).length ?? null
   const setsWon2 = details?.match.sets_won_player2 ?? details?.sets.filter((s) => s.player2_score > s.player1_score).length ?? null
 

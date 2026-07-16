@@ -41,10 +41,12 @@ Deno.serve(async (req: Request) => {
   webpush.setVapidDetails("mailto:admin@example.com", publicKey, privateKey);
 
   const submitterName = match.submitted_by === match.player1_id ? match.player1.name : match.player2.name;
+  const submitterSets = match.submitted_by === match.player1_id ? match.sets_won_player1 : match.sets_won_player2;
+  const opponentSets = match.submitted_by === match.player1_id ? match.sets_won_player2 : match.sets_won_player1;
   const payload = JSON.stringify({
-    title: "Kamp venter på bekreftelse",
-    body: `${submitterName} har registrert et resultat mot deg. Trykk for å bekrefte.`,
-    url: "matches/pending",
+    title: "Ny kamp registrert",
+    body: `${submitterName} registrerte ${submitterSets}-${opponentSets} mot deg. Kampen er automatisk godkjent.`,
+    url: "matches",
   });
 
   let sent = 0;

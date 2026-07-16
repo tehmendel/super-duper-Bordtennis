@@ -9,7 +9,6 @@ import { MfaChallenge } from '@/pages/MfaChallenge'
 import { Onboarding } from '@/pages/Onboarding'
 import { Dashboard } from '@/pages/Dashboard'
 import { NewMatch } from '@/pages/NewMatch'
-import { PendingConfirmations } from '@/pages/PendingConfirmations'
 import { MatchHistory } from '@/pages/MatchHistory'
 import { Leaderboard } from '@/pages/Leaderboard'
 import { PlayerProfile } from '@/pages/PlayerProfile'
@@ -47,7 +46,8 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<RequireAccess page="dashboard"><Dashboard /></RequireAccess>} />
         <Route path="/matches/new" element={<RequireAccess page="new_match"><NewMatch /></RequireAccess>} />
-        <Route path="/matches/pending" element={<RequireAccess page="pending"><PendingConfirmations /></RequireAccess>} />
+        {/* Kamper godkjennes automatisk nå -- gammel lenke/varsel-snarvei til bekreftelsessiden går til Historikk i stedet. */}
+        <Route path="/matches/pending" element={<Navigate to="/matches" replace />} />
         <Route path="/matches" element={<RequireAccess page="history"><MatchHistory /></RequireAccess>} />
         <Route path="/leaderboard" element={<RequireAccess page="leaderboard"><Leaderboard /></RequireAccess>} />
         <Route path="/players" element={<RequireAccess page="players"><Players /></RequireAccess>} />

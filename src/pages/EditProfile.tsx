@@ -185,7 +185,7 @@ export function EditProfile() {
         <div className="card p-5 flex flex-col gap-2">
           <p className="text-sm font-semibold">Push-varsler</p>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            Få et varsel på mobilen/PC-en når noen registrerer en kamp du må bekrefte.
+            Få et varsel på mobilen/PC-en når noen registrerer en kamp mot deg.
           </p>
           {pushError && <p className="text-sm text-rose-600">{pushError}</p>}
           <button onClick={togglePush} disabled={pushBusy} className={pushEnabled ? 'btn-secondary' : 'btn-primary'}>
