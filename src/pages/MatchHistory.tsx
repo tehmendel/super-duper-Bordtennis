@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
+import { Pagination } from '@/components/Pagination'
+import { usePageSize } from '@/hooks/usePageSize'
 import { formatDate } from '@/lib/date'
 import type { Match, Player, RatingHistoryEntry } from '@/lib/types'
 
@@ -12,9 +14,12 @@ interface EnrichedMatch extends Match {
 
 export function MatchHistory() {
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
+  const [total, setTotal] = useState(0)
   const [deltas, setDeltas] = useState<Record<string, RatingHistoryEntry[]>>({})
   const [players, setPlayers] = useState<Player[]>([])
   const [filterId, setFilterId] = useState('')
+  const [page, setPage] = useState(0)
+  const [pageSize, setPageSize] = usePageSize('matchHistory', 50)
   const [loading, setLoading] = useState(true)
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
 
@@ -23,18 +28,23 @@ export function MatchHistory() {
   }, [])
 
   useEffect(() => {
+    setPage(0)
+  }, [filterId, pageSize])
+
+  useEffect(() => {
     setLoading(true)
     let query = supabase
       .from('matches')
-      .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)')
+      .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)', { count: 'exact' })
       .eq('status', 'confirmed')
       .order('confirmed_at', { ascending: false })
-      .limit(100)
+      .range(page * pageSize, page * pageSize + pageSize - 1)
 
     if (filterId) query = query.or(`player1_id.eq.${filterId},player2_id.eq.${filterId}`)
 
-    query.returns<EnrichedMatch[]>().then(async ({ data }) => {
+    query.returns<EnrichedMatch[]>().then(async ({ data, count }) => {
       setMatches(data ?? [])
+      setTotal(count ?? 0)
       if (data && data.length > 0) {
         const { data: history } = await supabase
           .from('ratings_history')
@@ -46,10 +56,12 @@ export function MatchHistory() {
           grouped[h.match_id] = [...(grouped[h.match_id] ?? []), h]
         })
         setDeltas(grouped)
+      } else {
+        setDeltas({})
       }
       setLoading(false)
     })
-  }, [filterId])
+  }, [filterId, page, pageSize])
 
   return (
     <div className="flex flex-col gap-4">
@@ -104,6 +116,16 @@ export function MatchHistory() {
             )
           })}
         </div>
+      )}
+
+      {!loading && total > 0 && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={total}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
       )}
 
       <MatchDetailModal matchId={selectedMatchId} onClose={() => setSelectedMatchId(null)} />

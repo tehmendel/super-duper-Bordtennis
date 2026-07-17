@@ -10,6 +10,8 @@ import { AdminRoles } from '@/components/AdminRoles'
 import { AdminAuditLog } from '@/components/AdminAuditLog'
 import { AdminLadder } from '@/components/AdminLadder'
 import { AdminImpersonate } from '@/components/AdminImpersonate'
+import { Pagination } from '@/components/Pagination'
+import { usePageSize } from '@/hooks/usePageSize'
 import type { AchievementDefinition, Match, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
 import { WEEKDAY_NAMES as DAY_NAMES } from '@/lib/constants'
 import { formatDate } from '@/lib/date'
@@ -33,10 +35,16 @@ export function Admin() {
   const { player } = useAuth()
   const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog' | 'ladder' | 'impersonate'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
-  const [deltas, setDeltas] = useState<Record<string, RatingHistoryEntry[]>>({})
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<EnrichedMatch | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+
+  const [pagedMatches, setPagedMatches] = useState<EnrichedMatch[]>([])
+  const [pagedTotal, setPagedTotal] = useState(0)
+  const [pagedDeltas, setPagedDeltas] = useState<Record<string, RatingHistoryEntry[]>>({})
+  const [pagedLoading, setPagedLoading] = useState(true)
+  const [matchesPage, setMatchesPage] = useState(0)
+  const [matchesPageSize, setMatchesPageSize] = usePageSize('adminMatches', 50)
 
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
   const [achievementDefs, setAchievementDefs] = useState<AchievementDefinition[]>([])
@@ -51,6 +59,21 @@ export function Admin() {
       .limit(200)
       .returns<EnrichedMatch[]>()
     setMatches(data ?? [])
+    setLoading(false)
+  }, [])
+
+  const loadMatchesPage = useCallback(async () => {
+    setPagedLoading(true)
+    const from = matchesPage * matchesPageSize
+    const to = from + matchesPageSize - 1
+    const { data, count } = await supabase
+      .from('matches')
+      .select('*, player1:players!matches_player1_id_fkey(*), player2:players!matches_player2_id_fkey(*)', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to)
+      .returns<EnrichedMatch[]>()
+    setPagedMatches(data ?? [])
+    setPagedTotal(count ?? 0)
     if (data && data.length > 0) {
       const { data: history } = await supabase
         .from('ratings_history')
@@ -61,14 +84,24 @@ export function Admin() {
       history?.forEach((h) => {
         grouped[h.match_id] = [...(grouped[h.match_id] ?? []), h]
       })
-      setDeltas(grouped)
+      setPagedDeltas(grouped)
+    } else {
+      setPagedDeltas({})
     }
-    setLoading(false)
-  }, [])
+    setPagedLoading(false)
+  }, [matchesPage, matchesPageSize])
 
   useEffect(() => {
     load()
   }, [load])
+
+  useEffect(() => {
+    loadMatchesPage()
+  }, [loadMatchesPage])
+
+  useEffect(() => {
+    setMatchesPage(0)
+  }, [matchesPageSize])
 
   useEffect(() => {
     supabase.from('players').select('*').order('name').then(({ data }) => setAllPlayers(data ?? []))
@@ -92,14 +125,14 @@ export function Admin() {
     setBusyId(id)
     await supabase.rpc('admin_force_confirm_match', { p_match_id: id })
     setBusyId(null)
-    await load()
+    await Promise.all([load(), loadMatchesPage()])
   }
 
   async function forceReject(id: string) {
     setBusyId(id)
     await supabase.rpc('admin_reject_match', { p_match_id: id })
     setBusyId(null)
-    await load()
+    await Promise.all([load(), loadMatchesPage()])
   }
 
   async function deleteMatch(id: string) {
@@ -107,7 +140,7 @@ export function Admin() {
     setBusyId(id)
     await supabase.rpc('admin_delete_match', { p_match_id: id })
     setBusyId(null)
-    await load()
+    await Promise.all([load(), loadMatchesPage()])
   }
 
   const activePlayers = new Map<string, { name: string; avatar_url: string | null; count: number }>()
@@ -169,61 +202,78 @@ export function Admin() {
       {tab === 'auditlog' && <AdminAuditLog />}
       {tab === 'impersonate' && <AdminImpersonate />}
 
-      {(tab === 'matches' || tab === 'activity' || tab === 'achievements') && (loading ? (
+      {tab === 'matches' && (pagedLoading ? (
         <p className="text-slate-500">Laster...</p>
-      ) : tab === 'matches' ? (
+      ) : (
         <div className="flex flex-col gap-2">
-          {matches.map((m) => {
-            const d1 = deltas[m.id]?.find((d) => d.player_id === m.player1_id)
-            const d2 = deltas[m.id]?.find((d) => d.player_id === m.player2_id)
-            return (
-            <div key={m.id} className="card p-3 flex items-center gap-3 flex-wrap">
-              <StatusPill status={m.status} />
-              <span className="text-xs text-slate-400 w-20 shrink-0">
-                {formatDate(m.confirmed_at ?? m.created_at)}
-              </span>
-              <span className="flex items-center gap-2 flex-1 min-w-0">
-                <PlayerAvatar name={m.player1.name} avatarUrl={m.player1.avatar_url} size="sm" />
-                <span className={`truncate text-sm ${m.winner_id === m.player1_id ? 'font-bold' : ''}`}>{m.player1.name}</span>
-                {d1 && (
-                  <span className={`text-xs ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                    {d1.delta >= 0 ? '+' : ''}{Math.round(d1.delta)}
-                  </span>
-                )}
-              </span>
-              <span className="font-mono text-sm shrink-0">{m.sets_won_player1 ?? '?'}–{m.sets_won_player2 ?? '?'}</span>
-              <span className="flex items-center gap-2 flex-1 min-w-0 justify-end">
-                {d2 && (
-                  <span className={`text-xs ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                    {d2.delta >= 0 ? '+' : ''}{Math.round(d2.delta)}
-                  </span>
-                )}
-                <span className={`truncate text-sm ${m.winner_id === m.player2_id ? 'font-bold' : ''}`}>{m.player2.name}</span>
-                <PlayerAvatar name={m.player2.name} avatarUrl={m.player2.avatar_url} size="sm" />
-              </span>
-              <div className="flex gap-1 shrink-0">
-                {m.status === 'pending' && (
-                  <>
-                    <button disabled={busyId === m.id} onClick={() => forceConfirm(m.id)} className="btn-ghost p-2 text-emerald-600" title="Tving bekreft">
-                      <Check size={16} />
-                    </button>
-                    <button disabled={busyId === m.id} onClick={() => forceReject(m.id)} className="btn-ghost p-2 text-rose-600" title="Avvis">
-                      <XIcon size={16} />
-                    </button>
-                  </>
-                )}
-                <button disabled={busyId === m.id} onClick={() => setEditingMatch(m)} className="btn-ghost p-2" title="Rediger settscore">
-                  <Pencil size={16} />
-                </button>
-                <button disabled={busyId === m.id} onClick={() => deleteMatch(m.id)} className="btn-ghost p-2 text-rose-600" title="Slett">
-                  <Trash2 size={16} />
-                </button>
+          {pagedMatches.length === 0 ? (
+            <p className="text-slate-500 dark:text-slate-400">Ingen kamper.</p>
+          ) : (
+            pagedMatches.map((m) => {
+              const d1 = pagedDeltas[m.id]?.find((d) => d.player_id === m.player1_id)
+              const d2 = pagedDeltas[m.id]?.find((d) => d.player_id === m.player2_id)
+              return (
+              <div key={m.id} className="card p-3 flex items-center gap-3 flex-wrap">
+                <StatusPill status={m.status} />
+                <span className="text-xs text-slate-400 w-20 shrink-0">
+                  {formatDate(m.confirmed_at ?? m.created_at)}
+                </span>
+                <span className="flex items-center gap-2 flex-1 min-w-0">
+                  <PlayerAvatar name={m.player1.name} avatarUrl={m.player1.avatar_url} size="sm" />
+                  <span className={`truncate text-sm ${m.winner_id === m.player1_id ? 'font-bold' : ''}`}>{m.player1.name}</span>
+                  {d1 && (
+                    <span className={`text-xs ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {d1.delta >= 0 ? '+' : ''}{Math.round(d1.delta)}
+                    </span>
+                  )}
+                </span>
+                <span className="font-mono text-sm shrink-0">{m.sets_won_player1 ?? '?'}–{m.sets_won_player2 ?? '?'}</span>
+                <span className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                  {d2 && (
+                    <span className={`text-xs ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {d2.delta >= 0 ? '+' : ''}{Math.round(d2.delta)}
+                    </span>
+                  )}
+                  <span className={`truncate text-sm ${m.winner_id === m.player2_id ? 'font-bold' : ''}`}>{m.player2.name}</span>
+                  <PlayerAvatar name={m.player2.name} avatarUrl={m.player2.avatar_url} size="sm" />
+                </span>
+                <div className="flex gap-1 shrink-0">
+                  {m.status === 'pending' && (
+                    <>
+                      <button disabled={busyId === m.id} onClick={() => forceConfirm(m.id)} className="btn-ghost p-2 text-emerald-600" title="Tving bekreft">
+                        <Check size={16} />
+                      </button>
+                      <button disabled={busyId === m.id} onClick={() => forceReject(m.id)} className="btn-ghost p-2 text-rose-600" title="Avvis">
+                        <XIcon size={16} />
+                      </button>
+                    </>
+                  )}
+                  <button disabled={busyId === m.id} onClick={() => setEditingMatch(m)} className="btn-ghost p-2" title="Rediger settscore">
+                    <Pencil size={16} />
+                  </button>
+                  <button disabled={busyId === m.id} onClick={() => deleteMatch(m.id)} className="btn-ghost p-2 text-rose-600" title="Slett">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
-            )
-          })}
+              )
+            })
+          )}
+          {pagedTotal > 0 && (
+            <Pagination
+              page={matchesPage}
+              pageSize={matchesPageSize}
+              total={pagedTotal}
+              onPageChange={setMatchesPage}
+              onPageSizeChange={setMatchesPageSize}
+            />
+          )}
         </div>
-      ) : tab === 'activity' ? (
+      ))}
+
+      {tab === 'activity' && (loading ? (
+        <p className="text-slate-500">Laster...</p>
+      ) : (
         <div className="flex flex-col gap-6">
           <div className="card p-4">
             <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Mest aktive spillere</p>
@@ -283,6 +333,10 @@ export function Admin() {
             </ResponsiveContainer>
           </div>
         </div>
+      ))}
+
+      {tab === 'achievements' && (loading ? (
+        <p className="text-slate-500">Laster...</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
           {achievementDefs.map((d) => {
@@ -344,6 +398,7 @@ export function Admin() {
         onSaved={() => {
           setEditingMatch(null)
           load()
+          loadMatchesPage()
         }}
       />
     </div>

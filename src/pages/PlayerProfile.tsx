@@ -11,6 +11,8 @@ import { AchievementBadge } from '@/components/AchievementBadge'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
 import { PlayerTradingCard } from '@/components/PlayerTradingCard'
 import { StatsExplainerModal } from '@/components/StatsExplainerModal'
+import { Pagination } from '@/components/Pagination'
+import { usePageSize } from '@/hooks/usePageSize'
 import {
   averageSetMargin,
   clutchRate,
@@ -36,6 +38,8 @@ export function PlayerProfile() {
   const { theme, toggle: toggleTheme } = useTheme()
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const [showStatsExplainer, setShowStatsExplainer] = useState(false)
+  const [historyPage, setHistoryPage] = useState(0)
+  const [historyPageSize, setHistoryPageSize] = usePageSize('playerProfileMatches', 50)
   const [challenging, setChallenging] = useState(false)
   const [challengeSent, setChallengeSent] = useState(false)
   const [player, setPlayer] = useState<Player | null>(null)
@@ -111,6 +115,10 @@ export function PlayerProfile() {
     load()
     return () => { cancelled = true }
   }, [id])
+
+  useEffect(() => {
+    setHistoryPage(0)
+  }, [id, historyPageSize])
 
   useEffect(() => {
     if (!id || !currentPlayer || currentPlayer.id === id) return
@@ -490,7 +498,7 @@ export function PlayerProfile() {
       <div>
         <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-3">Kamphistorikk</p>
         <div className="flex flex-col gap-2">
-          {matches.slice(0, 15).map((m) => {
+          {matches.slice(historyPage * historyPageSize, historyPage * historyPageSize + historyPageSize).map((m) => {
             const won = m.winner_id === id
             const opponentId = m.player1_id === id ? m.player2_id : m.player1_id
             const opponent = players.find((p) => p.id === opponentId)
@@ -533,6 +541,15 @@ export function PlayerProfile() {
             )
           })}
         </div>
+        {matches.length > 0 && (
+          <Pagination
+            page={historyPage}
+            pageSize={historyPageSize}
+            total={matches.length}
+            onPageChange={setHistoryPage}
+            onPageSizeChange={setHistoryPageSize}
+          />
+        )}
       </div>
 
       <MatchDetailModal matchId={selectedMatchId} onClose={() => setSelectedMatchId(null)} />
