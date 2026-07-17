@@ -492,15 +492,43 @@ export function PlayerProfile() {
         <div className="flex flex-col gap-2">
           {matches.slice(0, 15).map((m) => {
             const won = m.winner_id === id
+            const opponentId = m.player1_id === id ? m.player2_id : m.player1_id
+            const opponent = players.find((p) => p.id === opponentId)
+            const myScore = m.player1_id === id ? m.sets_won_player1 : m.sets_won_player2
+            const oppScore = m.player1_id === id ? m.sets_won_player2 : m.sets_won_player1
+            const delta = historyByMatch[m.id]?.find((h) => h.player_id === id)
             return (
               <button
                 key={m.id}
                 onClick={() => setSelectedMatchId(m.id)}
-                className="card p-3 flex items-center justify-between text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                className="card p-3 flex items-center gap-3 flex-wrap text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
-                <span className={won ? 'text-emerald-500 font-semibold' : 'text-rose-500 font-semibold'}>{won ? 'Seier' : 'Tap'}</span>
-                <span className="font-mono">{m.sets_won_player1}–{m.sets_won_player2}</span>
-                <span className="text-slate-400 text-xs">{formatDate(m.confirmed_at ?? m.created_at)}</span>
+                <span className="text-xs text-slate-400 w-20 shrink-0">
+                  {formatDate(m.confirmed_at ?? m.created_at)}
+                </span>
+                <span className="flex items-center gap-2 flex-1 min-w-0">
+                  {opponent && <PlayerAvatar name={opponent.name} avatarUrl={opponent.avatar_url} size="sm" />}
+                  <span className="truncate text-sm">
+                    mot <span className="font-medium">{opponent?.name ?? 'Ukjent spiller'}</span>
+                  </span>
+                </span>
+                <span className="font-mono font-semibold shrink-0">{myScore}–{oppScore}</span>
+                <span className="flex items-center gap-2 shrink-0">
+                  {delta && (
+                    <span className={`text-xs ${delta.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                      {delta.delta >= 0 ? '+' : ''}{Math.round(delta.delta)}
+                    </span>
+                  )}
+                  <span
+                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      won
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
+                    }`}
+                  >
+                    {won ? 'Seier' : 'Tap'}
+                  </span>
+                </span>
               </button>
             )
           })}

@@ -10,7 +10,7 @@ import { AdminRoles } from '@/components/AdminRoles'
 import { AdminAuditLog } from '@/components/AdminAuditLog'
 import { AdminLadder } from '@/components/AdminLadder'
 import { AdminImpersonate } from '@/components/AdminImpersonate'
-import type { AchievementDefinition, Match, Player, PlayerAchievement } from '@/lib/types'
+import type { AchievementDefinition, Match, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
 import { WEEKDAY_NAMES as DAY_NAMES } from '@/lib/constants'
 import { formatDate } from '@/lib/date'
 
@@ -33,13 +33,14 @@ export function Admin() {
   const { player } = useAuth()
   const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog' | 'ladder' | 'impersonate'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
+  const [deltas, setDeltas] = useState<Record<string, RatingHistoryEntry[]>>({})
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<EnrichedMatch | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
 
   const [allPlayers, setAllPlayers] = useState<Player[]>([])
-  const [hiddenDefs, setHiddenDefs] = useState<AchievementDefinition[]>([])
-  const [hiddenEarned, setHiddenEarned] = useState<PlayerAchievement[]>([])
+  const [achievementDefs, setAchievementDefs] = useState<AchievementDefinition[]>([])
+  const [achievementEarned, setAchievementEarned] = useState<PlayerAchievement[]>([])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -50,6 +51,18 @@ export function Admin() {
       .limit(200)
       .returns<EnrichedMatch[]>()
     setMatches(data ?? [])
+    if (data && data.length > 0) {
+      const { data: history } = await supabase
+        .from('ratings_history')
+        .select('*')
+        .in('match_id', data.map((m) => m.id))
+        .returns<RatingHistoryEntry[]>()
+      const grouped: Record<string, RatingHistoryEntry[]> = {}
+      history?.forEach((h) => {
+        grouped[h.match_id] = [...(grouped[h.match_id] ?? []), h]
+      })
+      setDeltas(grouped)
+    }
     setLoading(false)
   }, [])
 
@@ -62,15 +75,13 @@ export function Admin() {
     supabase
       .from('achievement_definitions')
       .select('*')
-      .eq('hidden', true)
       .returns<AchievementDefinition[]>()
-      .then(({ data }) => setHiddenDefs(data ?? []))
+      .then(({ data }) => setAchievementDefs(data ?? []))
     supabase
       .from('player_achievements')
-      .select('*, achievement:achievement_definitions!inner(*)')
-      .eq('achievement.hidden', true)
+      .select('*')
       .returns<PlayerAchievement[]>()
-      .then(({ data }) => setHiddenEarned(data ?? []))
+      .then(({ data }) => setAchievementEarned(data ?? []))
   }, [])
 
   if (!player?.is_admin) {
@@ -133,7 +144,7 @@ export function Admin() {
           Aktivitet
         </button>
         <button onClick={() => setTab('achievements')} className={tab === 'achievements' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
-          Skjulte achievements
+          Achievements
         </button>
         <button onClick={() => setTab('seasons')} className={tab === 'seasons' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
           Sesonger
@@ -162,15 +173,31 @@ export function Admin() {
         <p className="text-slate-500">Laster...</p>
       ) : tab === 'matches' ? (
         <div className="flex flex-col gap-2">
-          {matches.map((m) => (
+          {matches.map((m) => {
+            const d1 = deltas[m.id]?.find((d) => d.player_id === m.player1_id)
+            const d2 = deltas[m.id]?.find((d) => d.player_id === m.player2_id)
+            return (
             <div key={m.id} className="card p-3 flex items-center gap-3 flex-wrap">
               <StatusPill status={m.status} />
+              <span className="text-xs text-slate-400 w-20 shrink-0">
+                {formatDate(m.confirmed_at ?? m.created_at)}
+              </span>
               <span className="flex items-center gap-2 flex-1 min-w-0">
                 <PlayerAvatar name={m.player1.name} avatarUrl={m.player1.avatar_url} size="sm" />
                 <span className={`truncate text-sm ${m.winner_id === m.player1_id ? 'font-bold' : ''}`}>{m.player1.name}</span>
+                {d1 && (
+                  <span className={`text-xs ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {d1.delta >= 0 ? '+' : ''}{Math.round(d1.delta)}
+                  </span>
+                )}
               </span>
               <span className="font-mono text-sm shrink-0">{m.sets_won_player1 ?? '?'}–{m.sets_won_player2 ?? '?'}</span>
               <span className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                {d2 && (
+                  <span className={`text-xs ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    {d2.delta >= 0 ? '+' : ''}{Math.round(d2.delta)}
+                  </span>
+                )}
                 <span className={`truncate text-sm ${m.winner_id === m.player2_id ? 'font-bold' : ''}`}>{m.player2.name}</span>
                 <PlayerAvatar name={m.player2.name} avatarUrl={m.player2.avatar_url} size="sm" />
               </span>
@@ -193,7 +220,8 @@ export function Admin() {
                 </button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       ) : tab === 'activity' ? (
         <div className="flex flex-col gap-6">
@@ -257,14 +285,31 @@ export function Admin() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-          {hiddenDefs.map((d) => {
-            const earners = hiddenEarned.filter((e) => e.achievement_id === d.id)
+          {achievementDefs.map((d) => {
+            const earnerCounts = new Map<string, { player: Player; count: number; firstEarnedAt: string }>()
+            achievementEarned
+              .filter((e) => e.achievement_id === d.id)
+              .forEach((e) => {
+                const p = allPlayers.find((pl) => pl.id === e.player_id)
+                if (!p) return
+                const existing = earnerCounts.get(p.id)
+                if (existing) {
+                  existing.count++
+                  if (e.earned_at < existing.firstEarnedAt) existing.firstEarnedAt = e.earned_at
+                } else {
+                  earnerCounts.set(p.id, { player: p, count: 1, firstEarnedAt: e.earned_at })
+                }
+              })
+            const earners = [...earnerCounts.values()].sort((a, b) => a.firstEarnedAt.localeCompare(b.firstEarnedAt))
             return (
               <div key={d.id} className="card p-4 flex flex-col gap-3">
                 <div className="flex items-start gap-2">
                   <span className="text-2xl shrink-0">{d.icon}</span>
                   <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">{d.name}</p>
+                    <p className="font-semibold text-sm truncate">
+                      {d.name}
+                      {d.hidden && <span className="ml-1.5 text-xs font-normal text-slate-400">(skjult)</span>}
+                    </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{d.description}</p>
                   </div>
                   <span className="ml-auto text-xs font-medium text-slate-400 shrink-0">{earners.length}/{allPlayers.length}</span>
@@ -273,20 +318,18 @@ export function Admin() {
                   <p className="text-xs text-slate-400 italic">Ingen har fått denne ennå</p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
-                    {earners.map((e) => {
-                      const p = allPlayers.find((pl) => pl.id === e.player_id)
-                      if (!p) return null
-                      return (
-                        <div
-                          key={e.id}
-                          title={formatDate(e.earned_at)}
-                          className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-full pl-1 pr-2.5 py-1"
-                        >
-                          <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
-                          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{p.name}</span>
-                        </div>
-                      )
-                    })}
+                    {earners.map(({ player: p, count, firstEarnedAt }) => (
+                      <div
+                        key={p.id}
+                        title={formatDate(firstEarnedAt)}
+                        className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-full pl-1 pr-2.5 py-1"
+                      >
+                        <PlayerAvatar name={p.name} avatarUrl={p.avatar_url} size="sm" />
+                        <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                          {p.name}{count > 1 ? ` (${count})` : ''}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
