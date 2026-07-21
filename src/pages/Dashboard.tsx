@@ -185,7 +185,13 @@ export function Dashboard() {
 
   if (!player) return null
 
+  const isSharedDevice = player.is_shared_device
+
   function renderCard(id: string) {
+    // Shared devices never play matches themselves (they just register
+    // matches between real players), so cards built around "your" rating,
+    // streak or match history would only ever show hollow zero-value noise.
+    if (isSharedDevice && (id === 'milestone' || id === 'inactivity' || id === 'past_match')) return null
     switch (id) {
       case 'season_countdown':
         if (!season?.target_end_date) return null
@@ -311,25 +317,33 @@ export function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold">Hei, {player.name.split(' ')[0]}!</h1>
           <p className="text-slate-500 dark:text-slate-400">
-            {loading ? 'Laster...' : rank ? `Plass #${rank} av ${totalPlayers}` : 'Ingen rangering ennå'}
+            {isSharedDevice
+              ? 'Delt enhet — registrerer kamper for andre spillere'
+              : loading
+                ? 'Laster...'
+                : rank
+                  ? `Plass #${rank} av ${totalPlayers}`
+                  : 'Ingen rangering ennå'}
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="card p-5">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Rating</p>
-          <p className="text-3xl font-bold">{Math.round(player.rating)}</p>
+      {!isSharedDevice && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="card p-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Rating</p>
+            <p className="text-3xl font-bold">{Math.round(player.rating)}</p>
+          </div>
+          <div className="card p-5">
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Siste kamper</p>
+            <FormPills results={form} />
+          </div>
         </div>
-        <div className="card p-5">
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">Siste kamper</p>
-          <FormPills results={form} />
-        </div>
-      </div>
+      )}
 
       <PlayerOfTheWeek />
 
-      <ChallengeFeed />
+      {!isSharedDevice && <ChallengeFeed />}
 
       <Link to="/matches/new" className="btn-primary py-4 text-base">
         <PlusCircle size={20} /> Registrer kamp
