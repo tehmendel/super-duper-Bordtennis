@@ -295,7 +295,7 @@ export function PlayerProfile() {
             </button>
           </div>
         ) : (
-          currentPlayer && (
+          currentPlayer && !currentPlayer.is_shared_device && (
             <button
               onClick={async () => {
                 setChallenging(true)

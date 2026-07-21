@@ -5,6 +5,13 @@ import type { AccessLevel, Player, PageKey } from '@/lib/types'
 
 export type MfaStatus = 'unenrolled' | 'unverified' | 'verified' | null
 
+// sessionStorage (not localStorage) so a PIN unlock survives an in-browser
+// refresh but is forgotten once the tab/browser is actually closed — a
+// middle ground between "ask every reload" (too much friction on a tablet
+// that gets refreshed) and "ask once forever" (defeats the point of a
+// recurring check in place of MFA).
+const PIN_VERIFIED_STORAGE_KEY = 'sharedDevicePinVerifiedPlayerId'
+
 interface AuthContextValue {
   session: Session | null
   player: Player | null
@@ -26,8 +33,10 @@ interface AuthContextValue {
   mfaStatus: MfaStatus
   refreshMfaStatus: () => Promise<void>
   /** Only meaningful for is_shared_device accounts — gates the app behind a
-   * PIN screen instead of MFA. Deliberately plain React state, not persisted:
-   * a fresh page load re-locks the device, same reasoning as impersonation. */
+   * PIN screen instead of MFA. Backed by sessionStorage (see
+   * PIN_VERIFIED_STORAGE_KEY): survives an in-page refresh but is forgotten
+   * once the browser/tab is actually closed, so it re-locks periodically
+   * without re-prompting on every reload. */
   pinVerified: boolean
   verifyPin: (pin: string) => Promise<boolean>
 }
@@ -115,28 +124,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
-      setPinVerified(false)
       if (session) {
         await refreshMfaStatus()
         const p = await loadPlayer(session.user.id)
         await loadPermissions(p)
+        setPinVerified(!!p?.is_shared_device && sessionStorage.getItem(PIN_VERIFIED_STORAGE_KEY) === p.id)
+      } else {
+        setPinVerified(false)
       }
       setLoading(false)
     })
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
-      setPinVerified(false)
       if (session) {
         await refreshMfaStatus()
         const p = await loadPlayer(session.user.id)
         await loadPermissions(p)
+        setPinVerified(!!p?.is_shared_device && sessionStorage.getItem(PIN_VERIFIED_STORAGE_KEY) === p.id)
       } else {
         setRealPlayer(null)
         setImpersonatedPlayer(null)
         setPermissions({})
         setCanRegisterForOthers(false)
         setMfaStatus(null)
+        setPinVerified(false)
       }
     })
 
@@ -152,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     setImpersonatedPlayer(null)
+    sessionStorage.removeItem(PIN_VERIFIED_STORAGE_KEY)
     await supabase.auth.signOut()
   }, [])
 
@@ -188,8 +201,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data, error } = await supabase.rpc('verify_shared_device_pin', { p_pin: pin })
     if (error || !data) return false
     setPinVerified(true)
+    if (realPlayer) sessionStorage.setItem(PIN_VERIFIED_STORAGE_KEY, realPlayer.id)
     return true
-  }, [])
+  }, [realPlayer])
 
   return (
     <AuthContext.Provider
