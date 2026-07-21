@@ -11,6 +11,7 @@ import { AchievementBadge } from '@/components/AchievementBadge'
 import { MatchDetailModal } from '@/components/MatchDetailModal'
 import { PlayerTradingCard } from '@/components/PlayerTradingCard'
 import { StatsExplainerModal } from '@/components/StatsExplainerModal'
+import { SharedDeviceAdminPanel } from '@/components/SharedDeviceAdminPanel'
 import { Pagination } from '@/components/Pagination'
 import { usePageSize } from '@/hooks/usePageSize'
 import {
@@ -136,8 +137,22 @@ export function PlayerProfile() {
     return () => { cancelled = true }
   }, [id, currentPlayer])
 
+  async function reloadPlayer() {
+    if (!id) return
+    const { data } = await supabase.from('players').select('*').eq('id', id).single()
+    setPlayer(data ?? null)
+  }
+
   if (loading) return <p className="text-slate-500">Laster...</p>
   if (!player) return <p className="text-slate-500">Fant ikke spilleren.</p>
+
+  if (player.is_shared_device) {
+    // Shared devices have no personal stats — non-admins see it as if it
+    // doesn't exist, admins get an account-management view instead of the
+    // normal (meaningless, all-zero) stats layout.
+    if (!currentPlayer?.is_admin) return <p className="text-slate-500">Fant ikke spilleren.</p>
+    return <SharedDeviceAdminPanel player={player} onUpdated={reloadPlayer} />
+  }
 
   const wins = matches.filter((m) => m.winner_id === id).length
   const winRate = matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0

@@ -15,7 +15,7 @@ export function NewTournament() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.from('players').select('*').order('rating', { ascending: false }).then(({ data }) => setPlayers(data ?? []))
+    supabase.from('players').select('*').eq('is_shared_device', false).order('rating', { ascending: false }).then(({ data }) => setPlayers(data ?? []))
   }, [])
 
   if (!hasAccess('tournaments', 'write')) {

@@ -20,10 +20,16 @@ interface AuthContextValue {
   loading: boolean
   permissions: Partial<Record<PageKey, AccessLevel>>
   hasAccess: (page: PageKey, level?: AccessLevel) => boolean
+  canRegisterForOthers: boolean
   refreshPlayer: () => Promise<void>
   signOut: () => Promise<void>
   mfaStatus: MfaStatus
   refreshMfaStatus: () => Promise<void>
+  /** Only meaningful for is_shared_device accounts — gates the app behind a
+   * PIN screen instead of MFA. Deliberately plain React state, not persisted:
+   * a fresh page load re-locks the device, same reasoning as impersonation. */
+  pinVerified: boolean
+  verifyPin: (pin: string) => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -36,7 +42,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // that's meant to be a temporary "view as" mode, not a standing setting.
   const [impersonatedPlayer, setImpersonatedPlayer] = useState<Player | null>(null)
   const [permissions, setPermissions] = useState<Partial<Record<PageKey, AccessLevel>>>({})
+  const [canRegisterForOthers, setCanRegisterForOthers] = useState(false)
   const [mfaStatus, setMfaStatus] = useState<MfaStatus>(null)
+  const [pinVerified, setPinVerified] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const player = impersonatedPlayer ?? realPlayer
@@ -65,10 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadPermissions = useCallback(async (currentPlayer: Player | null) => {
     if (!currentPlayer) {
       setPermissions({})
+      setCanRegisterForOthers(false)
       return
     }
     if (currentPlayer.is_admin) {
       setPermissions({}) // is_admin bypasses permission checks entirely (see hasAccess)
+      setCanRegisterForOthers(true)
       return
     }
     const { data: assignments, error: assignmentsError } = await supabase
@@ -82,9 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const roleIds = (assignments ?? []).map((a) => a.role_id)
     if (roleIds.length === 0) {
       setPermissions({})
+      setCanRegisterForOthers(false)
       return
     }
-    const { data: perms, error: permsError } = await supabase.from('role_permissions').select('*').in('role_id', roleIds)
+    const [{ data: perms, error: permsError }, { data: roles }] = await Promise.all([
+      supabase.from('role_permissions').select('*').in('role_id', roleIds),
+      supabase.from('roles').select('can_register_for_others').in('id', roleIds),
+    ])
     if (permsError) {
       console.error('Kunne ikke laste rolletilganger, beholder gjeldende tilganger', permsError)
       return
@@ -95,11 +109,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (merged[key] !== 'write') merged[key] = p.access_level
     })
     setPermissions(merged)
+    setCanRegisterForOthers((roles ?? []).some((r) => r.can_register_for_others))
   }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
+      setPinVerified(false)
       if (session) {
         await refreshMfaStatus()
         const p = await loadPlayer(session.user.id)
@@ -110,6 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session)
+      setPinVerified(false)
       if (session) {
         await refreshMfaStatus()
         const p = await loadPlayer(session.user.id)
@@ -118,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRealPlayer(null)
         setImpersonatedPlayer(null)
         setPermissions({})
+        setCanRegisterForOthers(false)
         setMfaStatus(null)
       }
     })
@@ -166,6 +184,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [player, permissions],
   )
 
+  const verifyPin = useCallback(async (pin: string) => {
+    const { data, error } = await supabase.rpc('verify_shared_device_pin', { p_pin: pin })
+    if (error || !data) return false
+    setPinVerified(true)
+    return true
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -178,10 +203,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         permissions,
         hasAccess,
+        canRegisterForOthers,
         refreshPlayer,
         signOut,
         mfaStatus,
         refreshMfaStatus,
+        pinVerified,
+        verifyPin,
       }}
     >
       {children}

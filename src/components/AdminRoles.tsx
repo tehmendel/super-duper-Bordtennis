@@ -221,6 +221,11 @@ export function AdminRoles() {
               <p className="font-semibold flex items-center gap-2">
                 {selectedRole.name}
                 {selectedRole.is_default && <span className="text-xs text-amber-600 bg-amber-100 dark:bg-amber-900/40 dark:text-amber-400 px-2 py-0.5 rounded-full">Standardrolle</span>}
+                {selectedRole.can_register_for_others && (
+                  <span className="text-xs text-brand-600 bg-brand-100 dark:bg-brand-900/40 dark:text-brand-400 px-2 py-0.5 rounded-full">
+                    Kan registrere kamper for andre spillere
+                  </span>
+                )}
               </p>
               <p className="text-xs text-slate-500 dark:text-slate-400">Alle nye spillere meldes automatisk inn i standardrollen.</p>
             </div>

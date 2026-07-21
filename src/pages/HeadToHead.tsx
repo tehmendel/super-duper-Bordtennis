@@ -26,7 +26,7 @@ export function HeadToHead() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    supabase.from('players').select('*').order('name').then(({ data }) => {
+    supabase.from('players').select('*').eq('is_shared_device', false).order('name').then(({ data }) => {
       setPlayers(data ?? [])
       if (player) setAId(player.id)
     })

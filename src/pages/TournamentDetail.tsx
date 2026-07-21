@@ -105,7 +105,7 @@ export function TournamentDetail() {
         .order('position')
         .returns<EnrichedMatch[]>(),
       supabase.from('tournament_participants').select('*').eq('tournament_id', id).returns<TournamentParticipant[]>(),
-      supabase.from('players').select('*').order('name').returns<Player[]>(),
+      supabase.from('players').select('*').eq('is_shared_device', false).order('name').returns<Player[]>(),
     ])
     setTournament(t ?? null)
     setMatches(m ?? [])

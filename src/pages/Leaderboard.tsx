@@ -64,7 +64,7 @@ export function Leaderboard() {
       setSelectedSeasonId(active?.id ?? data?.[0]?.id ?? '')
     })
     Promise.all([
-      supabase.from('players').select('*').returns<Player[]>(),
+      supabase.from('players').select('*').eq('is_shared_device', false).returns<Player[]>(),
       supabase.from('matches').select('*').eq('status', 'confirmed').returns<Match[]>(),
       supabase.from('ratings_history').select('*').returns<RatingHistoryEntry[]>(),
     ]).then(([{ data: p }, { data: m }, { data: h }]) => {

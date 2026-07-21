@@ -31,7 +31,7 @@ export function Players() {
   // Refreshing after a mutation must not unmount the page (and any open
   // modal along with it) while it refetches.
   const load = useCallback(async () => {
-    const { data } = await supabase.from('players').select('*').order('name').returns<Player[]>()
+    const { data } = await supabase.from('players').select('*').eq('is_shared_device', false).order('name').returns<Player[]>()
     setPlayers(data ?? [])
   }, [])
 

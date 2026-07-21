@@ -8,6 +8,7 @@ export interface Player {
   avatar_url: string | null
   rating: number
   is_admin: boolean
+  is_shared_device: boolean
   created_at: string
 }
 
@@ -68,6 +69,7 @@ export interface Role {
   id: string
   name: string
   is_default: boolean
+  can_register_for_others: boolean
   created_at: string
 }
 

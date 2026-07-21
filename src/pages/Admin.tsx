@@ -10,6 +10,7 @@ import { AdminRoles } from '@/components/AdminRoles'
 import { AdminAuditLog } from '@/components/AdminAuditLog'
 import { AdminLadder } from '@/components/AdminLadder'
 import { AdminImpersonate } from '@/components/AdminImpersonate'
+import { AdminSharedDevice } from '@/components/AdminSharedDevice'
 import { Pagination } from '@/components/Pagination'
 import { usePageSize } from '@/hooks/usePageSize'
 import type { AchievementDefinition, Match, Player, PlayerAchievement, RatingHistoryEntry } from '@/lib/types'
@@ -33,7 +34,7 @@ function StatusPill({ status }: { status: Match['status'] }) {
 
 export function Admin() {
   const { player } = useAuth()
-  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog' | 'ladder' | 'impersonate'>('matches')
+  const [tab, setTab] = useState<'matches' | 'activity' | 'achievements' | 'seasons' | 'roles' | 'auditlog' | 'ladder' | 'impersonate' | 'shared_device'>('matches')
   const [matches, setMatches] = useState<EnrichedMatch[]>([])
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<EnrichedMatch | null>(null)
@@ -194,6 +195,9 @@ export function Admin() {
         <button onClick={() => setTab('impersonate')} className={tab === 'impersonate' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
           Bli en bruker
         </button>
+        <button onClick={() => setTab('shared_device')} className={tab === 'shared_device' ? 'btn-primary py-1.5 px-3 text-sm' : 'btn-secondary py-1.5 px-3 text-sm'}>
+          Fellesbruker
+        </button>
       </div>
 
       {tab === 'seasons' && <AdminSeasons />}
@@ -201,6 +205,7 @@ export function Admin() {
       {tab === 'ladder' && <AdminLadder />}
       {tab === 'auditlog' && <AdminAuditLog />}
       {tab === 'impersonate' && <AdminImpersonate />}
+      {tab === 'shared_device' && <AdminSharedDevice />}
 
       {tab === 'matches' && (pagedLoading ? (
         <p className="text-slate-500">Laster...</p>
