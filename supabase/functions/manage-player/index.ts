@@ -7,7 +7,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const USERNAME_RE = /^[a-z0-9_.]{3,20}$/;
+const USERNAME_RE = /^[a-z0-9_.-]{3,20}$/;
 
 // Simple, pronounceable words so admins/write-role players can read a
 // generated password aloud or over Slack without typos.
@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
 
     if (!name) return jsonResponse({ error: "Navn er påkrevd" }, 400);
     if (!USERNAME_RE.test(username)) {
-      return jsonResponse({ error: "Brukernavn må være 3-20 tegn (bokstaver, tall, _ eller .)" }, 400);
+      return jsonResponse({ error: "Brukernavn må være 3-20 tegn (bokstaver, tall, _, . eller -)" }, 400);
     }
 
     const { data: existing } = await admin.from("players").select("id").ilike("username", username).maybeSingle();

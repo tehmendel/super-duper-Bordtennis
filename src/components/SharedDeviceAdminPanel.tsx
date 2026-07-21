@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { resolveFunctionError } from '@/lib/functionError'
 import type { Player } from '@/lib/types'
 
 export function SharedDeviceAdminPanel({ player, onUpdated }: { player: Player; onUpdated: () => void }) {
@@ -36,7 +37,7 @@ export function SharedDeviceAdminPanel({ player, onUpdated }: { player: Player; 
       })
       if (error || data?.error) {
         setCredentialsSaving(false)
-        setCredentialsError(data?.error ?? error?.message ?? 'Kunne ikke sette passord')
+        setCredentialsError(await resolveFunctionError(data, error, 'Kunne ikke sette passord'))
         return
       }
     }

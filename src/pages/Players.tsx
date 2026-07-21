@@ -4,6 +4,7 @@ import { Plus, X, KeyRound, Pencil, Trash2, CheckCircle2, Copy, ShieldOff } from
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
+import { resolveFunctionError } from '@/lib/functionError'
 import type { Player } from '@/lib/types'
 
 interface NewCredentials {
@@ -69,7 +70,7 @@ export function Players() {
     })
     setDeletingId(null)
     if (error || data?.error) {
-      setDeleteError(data?.error ?? error?.message ?? 'Kunne ikke slette spilleren')
+      setDeleteError(await resolveFunctionError(data, error, 'Kunne ikke slette spilleren'))
       return
     }
     setBanner(`${p.name} er slettet`)
@@ -87,7 +88,7 @@ export function Players() {
     })
     setResettingMfaId(null)
     if (error || data?.error) {
-      setDeleteError(data?.error ?? error?.message ?? 'Kunne ikke nullstille topartsinnlogging')
+      setDeleteError(await resolveFunctionError(data, error, 'Kunne ikke nullstille topartsinnlogging'))
       return
     }
     setBanner(`Topartsinnlogging for ${p.name} er nullstilt`)
@@ -239,7 +240,7 @@ function CreatePlayerModal({ onClose, onCreated }: { onClose: () => void; onCrea
     })
     setSaving(false)
     if (error || data?.error) {
-      setError(data?.error ?? error?.message ?? 'Kunne ikke opprette spiller')
+      setError(await resolveFunctionError(data, error, 'Kunne ikke opprette spiller'))
       return
     }
     onCreated({ name, username: data.username, password: data.password })
@@ -357,7 +358,7 @@ function EditCredentialsModal({ player, onClose, onSaved }: { player: Player; on
       })
       if (error || data?.error) {
         setSaving(false)
-        setError(data?.error ?? error?.message ?? 'Kunne ikke sette passord')
+        setError(await resolveFunctionError(data, error, 'Kunne ikke sette passord'))
         return
       }
     }
