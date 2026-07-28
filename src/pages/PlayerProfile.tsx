@@ -487,7 +487,7 @@ export function PlayerProfile() {
                 {nemesisPlayer.name}
               </Link>{' '}
               dominerer med {nemesis.losses} {nemesis.losses === 1 ? 'seier' : 'seire'} over deg (vunnet {nemesis.losses} av{' '}
-              {nemesis.wins + nemesis.losses} kamper, {Math.round((1 - nemesis.winRate) * 100)}% vinnerprosent)
+              {nemesis.wins + nemesis.losses} kamper, {Math.round((1 - nemesis.winRate) * 100)}% seiere)
             </p>
           </div>
         </div>
