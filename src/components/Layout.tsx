@@ -52,9 +52,9 @@ export function Layout() {
           isImpersonating ? 'md:top-10 md:h-[calc(100dvh-2.5rem)]' : 'md:top-0 md:h-dvh'
         }`}
       >
-        <div className="px-2 py-3 flex items-center gap-2 text-lg font-bold">
-          <span className="shrink-0">🏓</span>
-          <span className="truncate">Bordtennisportalen</span>
+        <div className="px-2 py-3 flex items-center gap-2 font-bold [container-type:inline-size]">
+          <span className="shrink-0 text-lg">🏓</span>
+          <span className="min-w-0 whitespace-nowrap text-[clamp(0.65rem,9cqw,1.125rem)]">Bordtennisportalen</span>
         </div>
         {visiblePrimary.map(({ to, label, icon: Icon, end }) => (
           <NavLink
@@ -116,9 +116,9 @@ export function Layout() {
       </aside>
 
       <header className="flex items-center justify-between p-4 md:hidden border-b border-slate-200 dark:border-slate-800">
-        <span className="flex items-center gap-2 text-lg font-bold">
-          <span className="shrink-0">🏓</span>
-          <span className="truncate">Bordtennisportalen</span>
+        <span className="flex-1 min-w-0 mr-2 flex items-center gap-2 font-bold [container-type:inline-size]">
+          <span className="shrink-0 text-lg">🏓</span>
+          <span className="min-w-0 whitespace-nowrap text-[clamp(0.65rem,9cqw,1.125rem)]">Bordtennisportalen</span>
         </span>
         <div className="flex items-center gap-1">
           {player && (
