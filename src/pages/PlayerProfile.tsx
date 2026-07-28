@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { Pencil, Skull, Trophy, Swords, Sun, Moon, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -377,12 +377,35 @@ export function PlayerProfile() {
       {chartData.length > 1 && (
         <div className="card p-4">
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mb-2">Rating over tid</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={chartData}>
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis domain={['dataMin - 20', 'dataMax + 20']} tick={{ fontSize: 11 }} width={40} />
-              <Tooltip />
-              <Line type="monotone" dataKey="rating" stroke="#2563eb" strokeWidth={2} dot={false} />
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={chartData} margin={{ top: 24, right: 16, left: 0, bottom: 0 }}>
+              <XAxis
+                dataKey="date"
+                tick={{ fontSize: 12, fill: theme === 'dark' ? '#cbd5e1' : '#334155' }}
+              />
+              <YAxis
+                domain={['dataMin - 20', 'dataMax + 20']}
+                tick={{ fontSize: 12, fill: theme === 'dark' ? '#cbd5e1' : '#334155' }}
+                width={40}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: theme === 'dark' ? '#1e293b' : '#ffffff',
+                  border: 'none',
+                  borderRadius: 8,
+                }}
+                labelStyle={{ color: theme === 'dark' ? '#f1f5f9' : '#0f172a', fontWeight: 600 }}
+                itemStyle={{ color: theme === 'dark' ? '#93c5fd' : '#2563eb', fontWeight: 600 }}
+              />
+              <Line type="monotone" dataKey="rating" stroke="#2563eb" strokeWidth={2} dot={{ r: 3, fill: '#2563eb', strokeWidth: 0 }}>
+                <LabelList
+                  dataKey="rating"
+                  position="top"
+                  fontSize={11}
+                  fontWeight={600}
+                  fill={theme === 'dark' ? '#e2e8f0' : '#1e293b'}
+                />
+              </Line>
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -463,7 +486,8 @@ export function PlayerProfile() {
               <Link to={`/players/${nemesisPlayer.id}`} className="font-semibold text-rose-500 hover:underline">
                 {nemesisPlayer.name}
               </Link>{' '}
-              dominerer med {nemesis.wins}–{nemesis.losses} ({Math.round((1 - nemesis.winRate) * 100)}% seiere mot deg)
+              dominerer med {nemesis.losses} {nemesis.losses === 1 ? 'seier' : 'seire'} over deg (vunnet {nemesis.losses} av{' '}
+              {nemesis.wins + nemesis.losses} kamper, {Math.round((1 - nemesis.winRate) * 100)}% vinnerprosent)
             </p>
           </div>
         </div>
