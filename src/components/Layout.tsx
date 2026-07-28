@@ -52,7 +52,10 @@ export function Layout() {
           isImpersonating ? 'md:top-10 md:h-[calc(100dvh-2.5rem)]' : 'md:top-0 md:h-dvh'
         }`}
       >
-        <div className="px-2 py-3 text-lg font-bold">🏓 Bordtennisportalen</div>
+        <div className="px-2 py-3 flex items-center gap-2 text-lg font-bold">
+          <span className="shrink-0">🏓</span>
+          <span className="truncate">Bordtennisportalen</span>
+        </div>
         {visiblePrimary.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -113,7 +116,10 @@ export function Layout() {
       </aside>
 
       <header className="flex items-center justify-between p-4 md:hidden border-b border-slate-200 dark:border-slate-800">
-        <span className="text-lg font-bold">🏓 Bordtennisportalen</span>
+        <span className="flex items-center gap-2 text-lg font-bold">
+          <span className="shrink-0">🏓</span>
+          <span className="truncate">Bordtennisportalen</span>
+        </span>
         <div className="flex items-center gap-1">
           {player && (
             <NavLink to={`/players/${player.id}`} className="btn-ghost p-1.5">
