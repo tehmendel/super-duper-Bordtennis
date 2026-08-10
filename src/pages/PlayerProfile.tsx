@@ -548,33 +548,29 @@ export function PlayerProfile() {
               <button
                 key={m.id}
                 onClick={() => setSelectedMatchId(m.id)}
-                className="card p-3 flex items-center gap-3 flex-wrap text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                className="card p-3 grid grid-cols-[5rem_1fr_2.75rem_2.5rem_3.75rem] items-center gap-2 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
               >
-                <span className="text-xs text-slate-400 w-20 shrink-0">
+                <span className="text-xs text-slate-400">
                   {formatDate(m.confirmed_at ?? m.created_at)}
                 </span>
-                <span className="flex items-center gap-2 flex-1 min-w-0">
+                <span className="flex items-center gap-2 min-w-0">
                   {opponent && <PlayerAvatar name={opponent.name} avatarUrl={opponent.avatar_url} size="sm" />}
                   <span className="truncate text-sm">
                     mot <span className="font-medium">{opponent?.name ?? 'Ukjent spiller'}</span>
                   </span>
                 </span>
-                <span className="font-mono font-semibold shrink-0">{myScore}–{oppScore}</span>
-                <span className="flex items-center gap-2 shrink-0">
-                  {delta && (
-                    <span className={`text-xs font-mono text-right w-9 shrink-0 ${delta.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {delta.delta >= 0 ? '+' : ''}{Math.round(delta.delta)}
-                    </span>
-                  )}
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      won
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                        : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
-                    }`}
-                  >
-                    {won ? 'Seier' : 'Tap'}
-                  </span>
+                <span className="font-mono font-semibold text-center">{myScore}–{oppScore}</span>
+                <span className={`text-xs font-mono text-right ${delta ? (delta.delta >= 0 ? 'text-emerald-500' : 'text-rose-500') : ''}`}>
+                  {delta && (delta.delta >= 0 ? '+' : '')}{delta && Math.round(delta.delta)}
+                </span>
+                <span
+                  className={`text-xs font-semibold px-2 py-0.5 rounded-full text-center justify-self-end ${
+                    won
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                      : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
+                  }`}
+                >
+                  {won ? 'Seier' : 'Tap'}
                 </span>
               </button>
             )

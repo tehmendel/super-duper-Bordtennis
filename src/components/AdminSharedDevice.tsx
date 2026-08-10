@@ -288,9 +288,9 @@ export function AdminSharedDevice() {
               const d1 = deltas[m.id]?.find((d) => d.player_id === m.player1_id)
               const d2 = deltas[m.id]?.find((d) => d.player_id === m.player2_id)
               return (
-                <div key={m.id} className="card p-3 flex items-center gap-3 flex-wrap">
-                  <span className="text-xs text-slate-400 w-20 shrink-0">{formatDate(m.confirmed_at ?? m.created_at)}</span>
-                  <span className="flex items-center gap-2 flex-1 min-w-0">
+                <div key={m.id} className="card p-3 grid grid-cols-[5rem_1fr_3rem_1fr] items-center gap-3">
+                  <span className="text-xs text-slate-400">{formatDate(m.confirmed_at ?? m.created_at)}</span>
+                  <span className="flex items-center gap-2 min-w-0">
                     <PlayerAvatar name={m.player1.name} avatarUrl={m.player1.avatar_url} size="sm" />
                     <span className={`truncate text-sm ${m.winner_id === m.player1_id ? 'font-bold' : ''}`}>{m.player1.name}</span>
                     {d1 && (
@@ -299,8 +299,8 @@ export function AdminSharedDevice() {
                       </span>
                     )}
                   </span>
-                  <span className="font-mono text-sm shrink-0">{m.sets_won_player1}–{m.sets_won_player2}</span>
-                  <span className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                  <span className="font-mono text-sm text-center">{m.sets_won_player1}–{m.sets_won_player2}</span>
+                  <span className="flex items-center gap-2 min-w-0 justify-end">
                     {d2 && (
                       <span className={`text-xs font-mono text-right w-9 shrink-0 ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                         {d2.delta >= 0 ? '+' : ''}{Math.round(d2.delta)}
