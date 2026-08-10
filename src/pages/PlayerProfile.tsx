@@ -562,7 +562,7 @@ export function PlayerProfile() {
                 <span className="font-mono font-semibold shrink-0">{myScore}–{oppScore}</span>
                 <span className="flex items-center gap-2 shrink-0">
                   {delta && (
-                    <span className={`text-xs ${delta.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    <span className={`text-xs font-mono text-right w-9 shrink-0 ${delta.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                       {delta.delta >= 0 ? '+' : ''}{Math.round(delta.delta)}
                     </span>
                   )}

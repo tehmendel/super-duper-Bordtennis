@@ -97,7 +97,7 @@ export function MatchHistory() {
                   <PlayerAvatar name={m.player1.name} avatarUrl={m.player1.avatar_url} size="sm" />
                   <span className={`truncate ${m.winner_id === m.player1_id ? 'font-bold' : ''}`}>{m.player1.name}</span>
                   {d1 && (
-                    <span className={`text-xs ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    <span className={`text-xs font-mono text-right w-9 shrink-0 ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                       {d1.delta >= 0 ? '+' : ''}{Math.round(d1.delta)}
                     </span>
                   )}
@@ -105,7 +105,7 @@ export function MatchHistory() {
                 <span className="font-mono font-semibold shrink-0">{m.sets_won_player1}–{m.sets_won_player2}</span>
                 <span className="flex items-center gap-2 flex-1 min-w-0 justify-end">
                   {d2 && (
-                    <span className={`text-xs ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    <span className={`text-xs font-mono text-right w-9 shrink-0 ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                       {d2.delta >= 0 ? '+' : ''}{Math.round(d2.delta)}
                     </span>
                   )}

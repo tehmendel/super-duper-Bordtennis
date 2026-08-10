@@ -150,12 +150,12 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                     {details.player1.name}
                   </span>
                   {d1 && (
-                    <span className={`text-xs ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    <span className={`text-xs font-mono ${d1.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                       {d1.delta >= 0 ? '+' : ''}{Math.round(d1.delta)}
                     </span>
                   )}
                 </div>
-                <span className="text-2xl font-bold text-slate-400">
+                <span className="text-2xl font-bold text-slate-400 font-mono">
                   {setsWon1 ?? '?'}–{setsWon2 ?? '?'}
                 </span>
                 <div className="flex flex-col items-center gap-1">
@@ -164,7 +164,7 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                     {details.player2.name}
                   </span>
                   {d2 && (
-                    <span className={`text-xs ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                    <span className={`text-xs font-mono ${d2.delta >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                       {d2.delta >= 0 ? '+' : ''}{Math.round(d2.delta)}
                     </span>
                   )}
