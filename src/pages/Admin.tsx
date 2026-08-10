@@ -39,6 +39,7 @@ export function Admin() {
   const [loading, setLoading] = useState(true)
   const [editingMatch, setEditingMatch] = useState<EnrichedMatch | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   const [pagedMatches, setPagedMatches] = useState<EnrichedMatch[]>([])
   const [pagedTotal, setPagedTotal] = useState(0)
@@ -123,24 +124,30 @@ export function Admin() {
   }
 
   async function forceConfirm(id: string) {
+    setActionError(null)
     setBusyId(id)
-    await supabase.rpc('admin_force_confirm_match', { p_match_id: id })
+    const { error } = await supabase.rpc('admin_force_confirm_match', { p_match_id: id })
     setBusyId(null)
+    if (error) return setActionError(error.message)
     await Promise.all([load(), loadMatchesPage()])
   }
 
   async function forceReject(id: string) {
+    setActionError(null)
     setBusyId(id)
-    await supabase.rpc('admin_reject_match', { p_match_id: id })
+    const { error } = await supabase.rpc('admin_reject_match', { p_match_id: id })
     setBusyId(null)
+    if (error) return setActionError(error.message)
     await Promise.all([load(), loadMatchesPage()])
   }
 
   async function deleteMatch(id: string) {
     if (!confirm('Slette denne kampen permanent? Rating blir gjenberegnet for alle.')) return
+    setActionError(null)
     setBusyId(id)
-    await supabase.rpc('admin_delete_match', { p_match_id: id })
+    const { error } = await supabase.rpc('admin_delete_match', { p_match_id: id })
     setBusyId(null)
+    if (error) return setActionError(error.message)
     await Promise.all([load(), loadMatchesPage()])
   }
 
@@ -207,6 +214,7 @@ export function Admin() {
       {tab === 'impersonate' && <AdminImpersonate />}
       {tab === 'shared_device' && <AdminSharedDevice />}
 
+      {tab === 'matches' && actionError && <p className="text-sm text-rose-600">{actionError}</p>}
       {tab === 'matches' && (pagedLoading ? (
         <p className="text-slate-500">Laster...</p>
       ) : (
