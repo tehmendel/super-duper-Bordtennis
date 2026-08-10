@@ -335,14 +335,14 @@ export function Leaderboard() {
                     const b = allPlayers.find((p) => p.id === r.playerBId)
                     if (!a || !b) return null
                     return (
-                      <div key={r.playerAId + r.playerBId} className="card p-3 flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2">
+                      <div key={r.playerAId + r.playerBId} className="card p-3 flex items-center gap-3 text-sm">
+                        <span className="flex items-center gap-2 flex-1 min-w-0">
                           <PlayerAvatar name={a.name} avatarUrl={a.avatar_url} size="sm" />
-                          {a.name}
+                          <span className="truncate">{a.name}</span>
                         </span>
-                        <span className="font-mono font-semibold">{r.winsA}–{r.winsB}</span>
-                        <span className="flex items-center gap-2">
-                          {b.name}
+                        <span className="font-mono font-semibold shrink-0">{r.winsA}–{r.winsB}</span>
+                        <span className="flex items-center gap-2 flex-1 min-w-0 justify-end">
+                          <span className="truncate">{b.name}</span>
                           <PlayerAvatar name={b.name} avatarUrl={b.avatar_url} size="sm" />
                         </span>
                       </div>
