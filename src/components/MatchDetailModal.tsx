@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { PlayerAvatar } from '@/components/PlayerAvatar'
 import { useShareImage } from '@/hooks/useShareImage'
-import { generateRoast } from '@/lib/roast'
+import { generateRoast, generateDrawRoast } from '@/lib/roast'
 import type { Match, MatchSet, Player, RatingHistoryEntry } from '@/lib/types'
 
 interface Details {
@@ -93,6 +93,7 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
   const d2 = details?.deltas.find((d) => d.player_id === details.match.player2_id)
 
   const p1Won = !!(details && details.match.winner_id === details.player1.id)
+  const isDraw = !!(details && details.match.status === 'confirmed' && details.match.winner_id === null)
   const eloExplain =
     d1 && d2
       ? {
@@ -116,13 +117,17 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
   }
 
   const roast =
-    details && details.match.winner_id && details.sets.length > 0
-      ? generateRoast(
-          details.match,
-          details.sets,
-          details.match.winner_id === details.player1.id ? details.player1.name : details.player2.name,
-          details.match.winner_id === details.player1.id ? details.player2.name : details.player1.name,
-        )
+    details && details.sets.length > 0
+      ? isDraw
+        ? generateDrawRoast(details.match, details.player1.name, details.player2.name)
+        : details.match.winner_id
+          ? generateRoast(
+              details.match,
+              details.sets,
+              details.match.winner_id === details.player1.id ? details.player1.name : details.player2.name,
+              details.match.winner_id === details.player1.id ? details.player2.name : details.player1.name,
+            )
+          : null
       : null
 
   return (
@@ -218,6 +223,12 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                 </button>
                 {showEloExplain && (
                   <div className="mt-2 flex flex-col gap-3 text-xs text-slate-500 dark:text-slate-400">
+                    {isDraw ? (
+                      <p>
+                        Kampen ble uavgjort — den teller i statistikken, men ratingen endres ikke for noen av spillerne.
+                      </p>
+                    ) : (
+                      <>
                     <p>
                       Forventet vinnersjanse regnes ut fra ratingforskjellen før kampen. Den som var høyest ratet hadde
                       størst forventet sjanse til å vinne — men får da også mindre å hente ved seier, og mister mer ved tap.
@@ -262,6 +273,8 @@ export function MatchDetailModal({ matchId, onClose }: { matchId: string | null;
                       K-faktoren er 48 for en spillers 10 første kamper i sesongen (raskere justering mens ratingen er
                       usikker), deretter 32.
                     </p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -26,6 +26,16 @@ const NORMAL_LINES = [
   (winner: string, loser: string) => `Nok en dag på jobben for ${winner}, som slo ${loser}.`,
 ]
 
+const DRAW_LINES = [
+  (name1: string, name2: string) => `${name1} og ${name2} delte poengene — ingen fikk overtaket.`,
+  (name1: string, name2: string) => `Uavgjort mellom ${name1} og ${name2}. Ingen ratingendring, ingen tapere.`,
+  (name1: string, name2: string) => `${name1} og ${name2} møtte sin overmann i hverandre. Uavgjort.`,
+]
+
+export function generateDrawRoast(match: Match, player1Name: string, player2Name: string): string {
+  return pick(DRAW_LINES, match.id)(player1Name, player2Name)
+}
+
 export function generateRoast(match: Match, sets: MatchSet[], winnerName: string, loserName: string): string {
   const isP1Winner = match.winner_id === match.player1_id
   const totalMargin = sets.reduce((sum, s) => {

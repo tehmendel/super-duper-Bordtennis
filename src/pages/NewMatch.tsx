@@ -13,7 +13,7 @@ const BEST_OF_OPTIONS = [1, 3, 5] as const
 const EMPTY_SETS: SetScore[] = [{ player1_score: '', player2_score: '' }, { player1_score: '', player2_score: '' }]
 
 type SubmittedSummary =
-  | { mode: 'self'; opponent: Player; won: boolean; setsWonSelf: number; setsWonOpponent: number }
+  | { mode: 'self'; opponent: Player; outcome: 'win' | 'draw' | 'loss'; setsWonSelf: number; setsWonOpponent: number }
   | { mode: 'others'; player1: Player; player2: Player; setsWonPlayer1: number; setsWonPlayer2: number }
 
 export function NewMatch() {
@@ -144,7 +144,8 @@ export function NewMatch() {
     const setsWonOpponent = parsedSets.length - setsWonSelf
     const opponent = players.find((p) => p.id === opponentId)
     if (opponent) {
-      setSubmitted({ mode: 'self', opponent, won: setsWonSelf > setsWonOpponent, setsWonSelf, setsWonOpponent })
+      const outcome = setsWonSelf > setsWonOpponent ? 'win' : setsWonSelf < setsWonOpponent ? 'loss' : 'draw'
+      setSubmitted({ mode: 'self', opponent, outcome, setsWonSelf, setsWonOpponent })
     }
   }
 
@@ -177,27 +178,40 @@ export function NewMatch() {
               <p className="font-mono text-xl font-bold">
                 {submitted.setsWonSelf}–{submitted.setsWonOpponent}
               </p>
-              <p className={`text-sm font-semibold ${submitted.won ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {submitted.won ? 'Seier!' : 'Tap'}
+              <p
+                className={`text-sm font-semibold ${
+                  submitted.outcome === 'win'
+                    ? 'text-emerald-500'
+                    : submitted.outcome === 'loss'
+                      ? 'text-rose-500'
+                      : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                {submitted.outcome === 'win' ? 'Seier!' : submitted.outcome === 'loss' ? 'Tap' : 'Uavgjort'}
               </p>
             </>
           ) : (
-            <div className="flex items-center justify-center gap-3">
-              <div className="flex items-center gap-2">
-                <PlayerAvatar name={submitted.player1.name} avatarUrl={submitted.player1.avatar_url} size="sm" />
-                <span className={submitted.setsWonPlayer1 > submitted.setsWonPlayer2 ? 'font-semibold' : 'text-slate-500 dark:text-slate-400'}>
-                  {submitted.player1.name}
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center justify-center gap-3">
+                <div className="flex items-center gap-2">
+                  <PlayerAvatar name={submitted.player1.name} avatarUrl={submitted.player1.avatar_url} size="sm" />
+                  <span className={submitted.setsWonPlayer1 > submitted.setsWonPlayer2 ? 'font-semibold' : 'text-slate-500 dark:text-slate-400'}>
+                    {submitted.player1.name}
+                  </span>
+                </div>
+                <span className="font-mono text-xl font-bold">
+                  {submitted.setsWonPlayer1}–{submitted.setsWonPlayer2}
                 </span>
+                <div className="flex items-center gap-2">
+                  <span className={submitted.setsWonPlayer2 > submitted.setsWonPlayer1 ? 'font-semibold' : 'text-slate-500 dark:text-slate-400'}>
+                    {submitted.player2.name}
+                  </span>
+                  <PlayerAvatar name={submitted.player2.name} avatarUrl={submitted.player2.avatar_url} size="sm" />
+                </div>
               </div>
-              <span className="font-mono text-xl font-bold">
-                {submitted.setsWonPlayer1}–{submitted.setsWonPlayer2}
-              </span>
-              <div className="flex items-center gap-2">
-                <span className={submitted.setsWonPlayer2 > submitted.setsWonPlayer1 ? 'font-semibold' : 'text-slate-500 dark:text-slate-400'}>
-                  {submitted.player2.name}
-                </span>
-                <PlayerAvatar name={submitted.player2.name} avatarUrl={submitted.player2.avatar_url} size="sm" />
-              </div>
+              {submitted.setsWonPlayer1 === submitted.setsWonPlayer2 && (
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Uavgjort</p>
+              )}
             </div>
           )}
           <div className="flex gap-2 mt-2 w-full">

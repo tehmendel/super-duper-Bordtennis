@@ -158,15 +158,15 @@ export function PlayerProfile() {
   const winRate = matches.length > 0 ? Math.round((wins / matches.length) * 100) : 0
 
   let streak = 0
-  let streakType: 'W' | 'L' | null = null
+  let streakType: 'W' | 'D' | 'L' | null = null
   for (const m of matches) {
-    const result: 'W' | 'L' = m.winner_id === id ? 'W' : 'L'
+    const result: 'W' | 'D' | 'L' = m.winner_id === id ? 'W' : m.winner_id === null ? 'D' : 'L'
     if (streakType === null) { streakType = result; streak = 1 }
     else if (result === streakType) streak++
     else break
   }
 
-  const form = matches.slice(0, 5).map((m) => (m.winner_id === id ? 'W' : 'L') as 'W' | 'L')
+  const form = matches.slice(0, 5).map((m) => (m.winner_id === id ? 'W' : m.winner_id === null ? 'D' : 'L') as 'W' | 'D' | 'L')
   const chartData = history.map((h) => ({
     date: new Date(h.created_at).toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit' }),
     rating: Math.round(h.rating_after),
@@ -344,6 +344,7 @@ export function PlayerProfile() {
         <div className="flex flex-col gap-1 mt-3">
           {matches.slice(0, 5).map((m) => {
             const won = m.winner_id === id
+            const isDraw = m.winner_id === null
             const opponentId = m.player1_id === id ? m.player2_id : m.player1_id
             const opponent = players.find((p) => p.id === opponentId)
             const myScore = m.player1_id === id ? m.sets_won_player1 : m.sets_won_player2
@@ -361,12 +362,14 @@ export function PlayerProfile() {
                 <span className="font-mono text-slate-400">{myScore}–{oppScore}</span>
                 <span
                   className={`text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 ${
-                    won
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                      : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
+                    isDraw
+                      ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                      : won
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
                   }`}
                 >
-                  {won ? 'Seier' : 'Tap'}
+                  {isDraw ? 'Uavgjort' : won ? 'Seier' : 'Tap'}
                 </span>
               </button>
             )
@@ -539,6 +542,7 @@ export function PlayerProfile() {
         <div className="flex flex-col gap-2">
           {matches.slice(historyPage * historyPageSize, historyPage * historyPageSize + historyPageSize).map((m) => {
             const won = m.winner_id === id
+            const isDraw = m.winner_id === null
             const opponentId = m.player1_id === id ? m.player2_id : m.player1_id
             const opponent = players.find((p) => p.id === opponentId)
             const myScore = m.player1_id === id ? m.sets_won_player1 : m.sets_won_player2
@@ -565,12 +569,14 @@ export function PlayerProfile() {
                 </span>
                 <span
                   className={`text-xs font-semibold px-2 py-0.5 rounded-full text-center justify-self-end ${
-                    won
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                      : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
+                    isDraw
+                      ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                      : won
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                        : 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400'
                   }`}
                 >
-                  {won ? 'Seier' : 'Tap'}
+                  {isDraw ? 'Uavgjort' : won ? 'Seier' : 'Tap'}
                 </span>
               </button>
             )

@@ -113,7 +113,7 @@ export function findNemesis(playerId: string, matches: Match[]): Nemesis | null 
     const oppId = m.player1_id === playerId ? m.player2_id : m.player1_id
     const r = record.get(oppId) ?? { wins: 0, losses: 0 }
     if (m.winner_id === playerId) r.wins++
-    else r.losses++
+    else if (m.winner_id) r.losses++ // a draw (winner_id null) counts toward neither
     record.set(oppId, r)
   }
   let nemesis: Nemesis | null = null

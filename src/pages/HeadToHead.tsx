@@ -55,6 +55,7 @@ export function HeadToHead() {
   const b = players.find((p) => p.id === bId)
   const aWins = matches.filter((m) => m.winner_id === aId).length
   const bWins = matches.filter((m) => m.winner_id === bId).length
+  const draws = matches.filter((m) => m.winner_id === null).length
   const aSets = matches.reduce((sum, m) => sum + (m.player1_id === aId ? (m.sets_won_player1 ?? 0) : (m.sets_won_player2 ?? 0)), 0)
   const bSets = matches.reduce((sum, m) => sum + (m.player1_id === bId ? (m.sets_won_player1 ?? 0) : (m.sets_won_player2 ?? 0)), 0)
 
@@ -103,6 +104,7 @@ export function HeadToHead() {
                       {aWins === bWins
                         ? 'Helt jevnt løp mellom dem 🤝'
                         : `${aWins > bWins ? a.name : b.name} dominerer oppgjøret ${Math.max(aWins, bWins)}–${Math.min(aWins, bWins)} 🔥`}
+                      {draws > 0 && ` (${draws} uavgjort)`}
                     </p>
                   )}
                 </div>
